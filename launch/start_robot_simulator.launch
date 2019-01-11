@@ -1,0 +1,9 @@
+<launch>
+
+  <!-- Start a Capek robot simulator -->
+  <node name="capek_robot_simulator" pkg="capek_launch" type="virtual_robot.launch" />
+
+  <!-- Start PPS robot node -->
+  <node name="pps_robot_node" pkg="pps_robot" type="robot_node.py" output="screen" />
+
+</launch>
