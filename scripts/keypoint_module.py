@@ -9,6 +9,8 @@ import pyrealsense2 as rs
 import rospy
 import tf
 from tf.transformations import quaternion_from_euler
+from std_msgs.msg import Int8
+
 
 from camera_setup import camera_setup
 
@@ -22,7 +24,7 @@ def get_distances(coord_tuples, depth_img, scale):
 
 
 show = True
-align, depth_scale, openpose, pc, points, pipeline, profile = camera_setup()
+align, depth_scale, openpose, pc, points, pipeline, profile = camera_setup(show)
 
 # Depth scale - units of the values inside a depth frame, i.e how to convert the value to units of 1 meter
 depth_sensor = profile.get_device().first_depth_sensor()
@@ -32,6 +34,7 @@ rospy.init_node('keypoint_tf_broadcaster')
 br = tf.TransformBroadcaster()
 rate = rospy.Rate(10.0)
 listener = tf.TransformListener()
+publisher = rospy.Publisher("pps_status", Int8, queue_size=1000)
 
 try:
     while True:
@@ -87,7 +90,7 @@ try:
                 distance = get_distances(interest_kpts, depth_image, depth_scale)
                 point = rs.rs2_deproject_pixel_to_point(depth_intrin, int_coords, distance[0])
                 print("deproject: {}").format(point)
-            # print(distances_to_camera)
+                # print(distances_to_camera)
 
                 br.sendTransform(tuple(point),
                                  quaternion_from_euler(0, 0, 0),
@@ -97,7 +100,13 @@ try:
 
                 try:
                     (trans, rot) = listener.lookupTransform('/camera', '/neck', rospy.Time(0))
-                    print("Distance between the hands is = {0:f}".format(np.linalg.norm(trans)))
+                    dist = np.linalg.norm(trans)
+
+                    if 0 < point[2] < 0.8:
+                        publisher.publish(2)
+                    elif point[2] > 4:
+                        publisher.publish(3)
+                    # print("Distance between the hands is = {0:f}".format(np.linalg.norm(trans)))
                 except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                     continue
 

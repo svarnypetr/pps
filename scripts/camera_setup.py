@@ -6,7 +6,7 @@ import sys
 import pyrealsense2 as rs
 
 
-def camera_setup():
+def camera_setup(show):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     # Append to syspath the path to openpose python build
     sys.path.append('/home/naoskin/openposeKuka/openpose/build/python')
@@ -35,6 +35,8 @@ def camera_setup():
     params["heatmaps_add_PAFs"] = True
     # Ensure you point to the correct path where models are located
     params["default_model_folder"] = "/home/naoskin/openposeKuka/openpose/models/"
+    if not show:
+        params["display"] = 0
     # Construct OpenPose object allocates GPU memory
     openpose = OpenPose(params)
 
@@ -67,12 +69,13 @@ def camera_setup():
     # Getting the depth sensor's depth scale (see rs-align example for explanation)
     depth_sensor = profile.get_device().first_depth_sensor()
     depth_scale = depth_sensor.get_depth_scale()
-    print("Depth Scale is: ", depth_scale)
 
     # Create an align object
     # rs.align allows us to perform alignment of depth frames to others frames
     # The "align_to" is the stream type to which we plan to align depth frames.
     align_to = rs.stream.color
     align = rs.align(align_to)
+
+    print("Camera setup ready.")
 
     return align, depth_scale, openpose, pc, points, pipeline, profile
