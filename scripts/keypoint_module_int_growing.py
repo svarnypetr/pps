@@ -17,10 +17,10 @@ from camera_setup import camera_setup
 
 def get_distances(coord_tuples, depth_img, scale):
     def in_bound(x):
-        return int(x[0]) < 480 and int(x[1]) < 480
+        return int(x[0]+1) < 480 and int(x[1]+1) < 640
 
-    return [depth_img[int(x[0]), int(x[1])] * scale
-            if in_bound(x) else 0 for x in coord_tuples]
+    return [depth_img[int(x[0]+1), int(x[1])+1] * scale
+            if in_bound(x) else 1000 for x in coord_tuples]
 
 
 show = True
@@ -73,44 +73,52 @@ try:
 
         keypoints, output_image = openpose.forward(color_image, True)
 
-        # Upper body keypoints
-        # interesting = [0, 1, 2, 3, 4, 5, 6, 7, 14, 15, 16, 17]
+        # interesting keypoints based on Openpose homunculus
+        upper_body_idxs = [1, 2, 3, 4, 5, 6, 7]
+        head_idxs = [0, 14, 15, 16, 17]
 
-        # Neck body keypoint
-        interesting = [0]
+        interest_groups = [upper_body_idxs, head_idxs]
 
         if keypoints.any() and depth_image.any():
-            interest_kpts = keypoints[0][interesting, :]
-            # print(interest_kpts[0])
+            for group in interest_groups:
+                kpts = keypoints[0][group, :]
+                # print(interest_kpts[0])
+                print('Number of kpt groups: {}'.format(len(keypoints)))
 
-            distances_to_camera = get_distances(interest_kpts, depth_image, depth_scale)
+                import ipdb; ipdb.set_trace()
+                distances = get_distances(kpts, depth_image, depth_scale)
+                min_distance_to_camera = min(distances)
+                if min_distance_to_camera > 0:
+                    min_dist_keypoint = kpts[distances.index(min_distance_to_camera)]
+                    print(min_distance_to_camera)
+                    #
+                    # if min_dist_keypoint.any():
+                    # use non zero minimum
+                    int_coords = min_dist_keypoint[:2].astype(int).tolist()
+                    print(int_coords)
 
-            if interest_kpts[0].any():
-                interest_kpts[0][0] += 1
-                interest_kpts[0][1] += 1
-                int_coords = interest_kpts[0][:2].astype(int).tolist()
-                distance = get_distances(interest_kpts, depth_image, depth_scale)
-                point = rs.rs2_deproject_pixel_to_point(depth_intrin, int_coords, distance[0])
-                print("deproject: {}").format(point)
-                # print(distances_to_camera)
-
-                br.sendTransform(tuple(point),
-                                 quaternion_from_euler(0, 0, 0),
-                                 rospy.Time.now(),
-                                 "neck",
-                                 "camera")
-
-                try:
-                    (trans, rot) = listener.lookupTransform('/camera', '/neck', rospy.Time(0))
-                    dist = np.linalg.norm(trans)
-
-                    if 0 < point[2] < 0.8:
-                        publisher.publish(2)
-                    elif point[2] > 4:
-                        publisher.publish(3)
-                    # print("Distance between the hands is = {0:f}".format(np.linalg.norm(trans)))
-                except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                    continue
+                    # point = rs.rs2_deproject_pixel_to_point(depth_intrin, int_coords, min_distance_to_camera)
+                    # print("deproject: {} at {}").format(point, int_coords)
+                    # # print(distances_to_camera)
+                    # # brat minimum z hlavy - head, arm, body
+                    #
+                    # br.sendTransform(tuple(point),
+                    #                  quaternion_from_euler(0, 0, 0),
+                    #                  rospy.Time.now(),
+                    #                  "neck",
+                    #                  "camera")
+                    #
+                    # try:
+                    #     (trans, rot) = listener.lookupTransform('/camera', '/neck', rospy.Time(0))
+                    #     dist = np.linalg.norm(trans)
+                    #
+                    #     if 0 < point[2] < 0.8:
+                    #         publisher.publish(2)
+                    #     elif point[2] > 4:
+                    #         publisher.publish(3)
+                    #     # print("Distance between the hands is = {0:f}".format(np.linalg.norm(trans)))
+                    # except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                    #     continue
 
         if show:
             images = np.hstack((output_image, depth_colormap))

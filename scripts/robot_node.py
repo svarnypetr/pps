@@ -42,6 +42,7 @@ def pps_callback(msg):
     status = msg.data
     if status == 0:
         rospy.loginfo("Safe: Executing trajectory")
+        crc.execute_plan2(cartesian_plan, True, [printout])
     if status == 1:
         rospy.loginfo("Warning: Adjusting robot speed down")
     if status == 2:
