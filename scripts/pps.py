@@ -355,21 +355,26 @@ if __name__ == "__main__":
         # #
         # # pps = PeriPersonalSpaceChecker(listener, pair_array=pairs)
         #
-        keypoints = [['/camera'], ['/r2_ee', '/r2_link_0']]
-        pps = PeriPersonalSpaceChecker(listener,
-                                       keypoints=keypoints,)
-                                       # robot_coef=robot_coef,
-                                       # obstacle_coef=obst_coef)
-        #
+        # keypoints = [['/camera'], ['/r2_ee', '/r2_link_0']]
+        # pps = PeriPersonalSpaceChecker(listener,
+        #                                keypoints=keypoints,)
+        #                                # robot_coef=robot_coef,
+        #                                # obstacle_coef=obst_coef)
+        # #
         # coeffgen = CoefficientGenerator(listener, keypoints[0])
+
 
         rate = rospy.Rate(10.0)
         while not rospy.is_shutdown():
+            try:
+                print(listener.lookupTwist('world', '0', rospy.Time(), rospy.Duration.from_sec(1)))
+            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                print('none')
             # alarm_dict = pps.check_pps()
             # ros_message = pps.transform_dict_to_message(alarm_dict)
             pps_status = 0
             # pps.publisher.publish(ros_message)
-            pps.publisher_status.publish(pps_status)
+            # pps.publisher_status.publish(pps_status)
 
             rate.sleep()
         rospy.spin()
