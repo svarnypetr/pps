@@ -4,19 +4,72 @@ import os
 import sys
 
 import pyrealsense2 as rs
+import time
+import json
+
+
+DS5_product_ids = ["0AD1", "0AD2", "0AD3", "0AD4", "0AD5", "0AF6", "0AFE", "0AFF", "0B00", "0B01", "0B03", "0B07"]
+
+
+def find_device_that_supports_advanced_mode() :
+    ctx = rs.context()
+    ds5_dev = rs.device()
+    devices = ctx.query_devices();
+    for dev in devices:
+        if dev.supports(rs.camera_info.product_id) and str(dev.get_info(rs.camera_info.product_id)) in DS5_product_ids:
+            if dev.supports(rs.camera_info.name):
+                print("Found device that supports advanced mode:", dev.get_info(rs.camera_info.name))
+            return dev
+    raise Exception("No device that supports advanced mode was found")
+
+
+def setup_advanced_camera():
+    try:
+        dev = find_device_that_supports_advanced_mode()
+        advnc_mode = rs.rs400_advanced_mode(dev)
+        print("Advanced mode is", "enabled" if advnc_mode.is_enabled() else "disabled")
+
+        # Loop until we successfully enable advanced mode
+        while not advnc_mode.is_enabled():
+            print("Trying to enable advanced mode...")
+            advnc_mode.toggle_advanced_mode(True)
+            # At this point the device will disconnect and re-connect.
+            print("Sleeping for 5 seconds...")
+            time.sleep(5)
+            # The 'dev' object will become invalid and we need to initialize it again
+            dev = find_device_that_supports_advanced_mode()
+            advnc_mode = rs.rs400_advanced_mode(dev)
+            print("Advanced mode is", "enabled" if advnc_mode.is_enabled() else "disabled")
+
+        with open('/home/naoskin/michael_pycommander/src/pps_robot/scripts/short_range.json') as f:
+            as_json_object = json.load(f)
+
+            # We can also load controls from a json string
+            # For Python 2, the values in 'as_json_object' dict need to be converted from unicode object to utf-8
+            if type(next(iter(as_json_object))) != str:
+                as_json_object = {k.encode('utf-8'): v for k, v in as_json_object.items()}
+            # The C++ JSON parser requires double-quotes for the json object so we need
+            # to replace the single quote of the pythonic json to double-quotes
+            json_string = str(as_json_object).replace("'", '\"')
+            advnc_mode.load_json(json_string)
+
+    except Exception as e:
+        print(e)
+        pass
 
 
 def camera_setup(show):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     # Append to syspath the path to openpose python build
     sys.path.append('/home/naoskin/openposeKuka/openpose/build/python')
-
-    # Parameters for OpenPose.
-    # Take a look at C++ OpenPose example for meaning of components.
     try:
         from openpose import *
     except:
-        raise Exception('Error: OpenPose library could not be found. Did you enable `BUILD_PYTHON` in CMake and have this Python script in the right folder?')
+        raise Exception(
+            'Error: OpenPose library could not be found. Did you enable `BUILD_PYTHON` in CMake and have this Python script in the right folder?')
+
+    # Parameters for OpenPose.
+    # Take a look at C++ OpenPose example for meaning of components.
     params = dict()
     params["logging_level"] = 3
     params["output_resolution"] = "-1x-1"
@@ -42,12 +95,7 @@ def camera_setup(show):
 
     depth_fps = 90
 
-    safety_coefficient = 0
-
-    # experiment_timestamp = int(time.time())
-    # experiment_server_matrixes_file_name = 'output/' + str(experiment_timestamp) + '_server_matrixes'
-    # with open(experiment_server_matrixes_file_name, 'w') as output_file:
-    #     output_file.write('SERVER MATRIXES\n')
+    # setup_advanced_camera()
 
     # Declare pointcloud object, for calculating pointclouds and texture mappings
     pc = rs.pointcloud()
@@ -62,9 +110,8 @@ def camera_setup(show):
     config = rs.config()
     # config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
     # config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-    config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
-    config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
-
+    config.enable_stream(rs.stream.depth,  848, 480, rs.format.z16, 90)
+    config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
 
     # Start streaming
     profile = pipeline.start(config)
@@ -82,3 +129,7 @@ def camera_setup(show):
     print("Camera setup ready.")
 
     return align, depth_scale, openpose, pc, points, pipeline, profile
+
+
+if __name__ == '__main__':
+    camera_setup(True)
