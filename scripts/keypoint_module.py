@@ -77,9 +77,9 @@ try:
         upper_body = [1, 2, 3, 4, 5, 6, 7]
         lower_body = [8, 9, 10, 11, 12, 13]
 
-        interesting = head
+        interesting = head + upper_body
+        kpt_names = [str(x) for x in interesting]
         robot_keypoints = ['/r2_ee', '/r2_link_0']
-
 
         if keypoints.any() and depth_image.any():
             interest_kpts = keypoints[0][interesting, :]
@@ -96,7 +96,7 @@ try:
                 br.sendTransform(tuple(pt),
                                  quaternion_from_euler(0, 0, 0),
                                  rospy.Time.now(),
-                                 str(idx),
+                                 kpt_names[idx],
                                  'camera')
 
                 # try:
