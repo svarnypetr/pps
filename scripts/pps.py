@@ -253,7 +253,7 @@ class PeriPersonalSpaceChecker(object):
                 obstacle_dict.update(
                     {obstacle_keypoints[obstacle_idx]: {
                                                         'difference': difference_matrix[robot_index][obstacle_idx],
-                                                        'state': state,
+                                                        'status': state,
                                                         'distance': self.distance_mat[robot_index][obstacle_idx],
                                                         'stop threshold': self.stop_threshold_mat[robot_index][obstacle_idx],
                                                         'warning threshold': self.warning_threshold_mat[robot_index][obstacle_idx],
@@ -269,13 +269,12 @@ class PeriPersonalSpaceChecker(object):
         :param stop_diff_matrix:
         :return: {dict}
         """
-
         robot_coef = np.array(self.robot_coef)
         obstacle_coef = np.array(self.obstacle_coef)
 
-        alarm_dict_output = {'state': 'SAFE',
+        alarm_dict_output = {'status': 3,
                              'keypoints': {},
-                             'reason': 'Default state.',
+                             'reason': 'Safe state.',
                              'context':
                                        {
                                         'pairs': np.ndarray.tolist(self.pairs),
@@ -293,13 +292,13 @@ class PeriPersonalSpaceChecker(object):
                                        },
                             }
         if self.is_pps_incursion(warning_diff_matrix):
-            alarm_dict_output['state'] = 'WARNING'
+            alarm_dict_output['status'] = 4
             alarm_dict_output['keypoints'].update(self.get_incursion_points(warning_diff_matrix, 'warning'))
             alarm_dict_output['reason'] = 'Warning threshold exceeded.'
             # print('Warning')
             # print(alarm_dict_output)
         if self.is_pps_incursion(stop_diff_matrix):
-            alarm_dict_output['state'] = 'STOP'
+            alarm_dict_output['status'] = 0
             alarm_dict_output['keypoints'].update(self.get_incursion_points(stop_diff_matrix, 'stop'))
             alarm_dict_output['reason'] = 'Stopping threshold exceeded.'
             # print('STOP')
@@ -314,21 +313,21 @@ class PeriPersonalSpaceChecker(object):
     def check_pps(self):
         """
         Checks whether for the given keypoint pairs a PPS violation happened
-        :return:
+        :return: {dict} of the alarm message
         """
-        import ipdb; ipdb.set_trace()
+
         current_positions = self.get_current_positions()
         self.distance_mat = self.compute_distance_matrix(current_positions)
         stop_activation = self.create_diff(self.distance_mat, self.stop_threshold_mat)
         warning_activation = self.create_diff(self.distance_mat, self.warning_threshold_mat)
-        print (self.distance_mat)  # WIP
+        # print (self.distance_mat)  # WIP
         # print (self.warning_threshold_mat)  # WIP
         # print (self.stop_threshold_mat)  # WIP
-        # import ipdb; ipdb.set_trace()  # WIP
+
         alarm_msg = self.construct_alarm_dict(warning_activation, stop_activation)
         if self.is_missing_threshold_mat(self.stop_threshold_mat):
-            alarm_dict['state'] = 'STOP'
-            alarm_dict['reason'] = 'Missing Threshold matrix.'
+            alarm_msg['status'] = 0
+            alarm_msg['reason'] = 'Missing Threshold matrix.'
         return alarm_msg
 
     @staticmethod
@@ -346,36 +345,37 @@ if __name__ == "__main__":
 
     try:
         listener = tf.TransformListener()
+
+        # pairs = np.array([['/r1_ee', '/r2_ee'],
+        #                   ['/r1_link_7', '/r2_link_7'],
+        #                   ['/r1_link_6', '/r2_link_6']
+        #                  ]
+        #                 )
         #
-        # # pairs = np.array([['/r1_ee', '/r2_ee'],
-        # #                   ['/r1_link_7', '/r2_link_7'],
-        # #                   ['/r1_link_6', '/r2_link_6']
-        # #                  ]
-        # #                 )
-        # #
-        # # pps = PeriPersonalSpaceChecker(listener, pair_array=pairs)
-        #
-        # keypoints = [['/camera'], ['/r2_ee', '/r2_link_0']]
-        # pps = PeriPersonalSpaceChecker(listener,
-        #                                keypoints=keypoints,)
+        # pps = PeriPersonalSpaceChecker(listener, pair_array=pairs)
+
+        keypoints = [['/0'], ['/r2_ee', '/r2_link_0']]
+        pps = PeriPersonalSpaceChecker(listener,
+                                       keypoints=keypoints,)
         #                                # robot_coef=robot_coef,
         #                                # obstacle_coef=obst_coef)
         # #
-        # coeffgen = CoefficientGenerator(listener, keypoints[0])
-
+        coeffgen = CoefficientGenerator(listener, keypoints[0])
 
         rate = rospy.Rate(10.0)
         while not rospy.is_shutdown():
-            try:
-                twist = listener.lookupTwist('world', '0', rospy.Time(), rospy.Duration.from_sec(0.001))
-                print(np.linalg.norm(twist[0]))
-            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                print('none')
-            # alarm_dict = pps.check_pps()
-            # ros_message = pps.transform_dict_to_message(alarm_dict)
-            pps_status = 0
-            # pps.publisher.publish(ros_message)
-            # pps.publisher_status.publish(pps_status)
+
+            # Speed calculation
+            # try:
+            #     twist = listener.lookupTwist('world', '0', rospy.Time(), rospy.Duration.from_sec(0.001))
+            #     print(np.linalg.norm(twist[0]))
+            # except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            #     print('none')
+
+            alarm_dict = pps.check_pps()
+            ros_message = pps.transform_dict_to_message(alarm_dict)
+            pps.publisher.publish(ros_message)
+            pps.publisher_status.publish(int(alarm_dict['status']))
 
             rate.sleep()
         rospy.spin()
