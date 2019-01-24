@@ -367,7 +367,8 @@ if __name__ == "__main__":
         rate = rospy.Rate(10.0)
         while not rospy.is_shutdown():
             try:
-                print(listener.lookupTwist('world', '0', rospy.Time(), rospy.Duration.from_sec(1)))
+                twist = listener.lookupTwist('world', '0', rospy.Time(), rospy.Duration.from_sec(0.001))
+                print(np.linalg.norm(twist[0]))
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 print('none')
             # alarm_dict = pps.check_pps()
