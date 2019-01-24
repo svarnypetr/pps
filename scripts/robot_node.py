@@ -7,7 +7,7 @@ from std_msgs.msg import Int8
 
 # Initialize node and robot
 rospy.init_node("joint_space_move_example")
-crc = CapekRobotCommander("r2")
+crc = CapekRobotCommander("r1")
 
 # Go to the names position L
 crc.move_l_position()
