@@ -35,7 +35,24 @@ class Ellipse(object):
             pp.orientation.z = 0.0
             pp.orientation.w = 0.0
             self.poses.append(pp)
-
+    
+        pp = deepcopy(p)
+        pp.position.x = self.coordinates[0][0]
+        pp.position.y = self.coordinates[0][1]
+        pp.position.z = 0.6
+        pp.orientation.x = 0.0
+        pp.orientation.y = 1.0
+        pp.orientation.z = 0.0
+        pp.orientation.w = 0.0
+        self.poses.append(pp)
+        
+        """ self.poses[-1].position.x = self.poses[0].position.x
+        self.poses[-1].position.y = self.poses[0].position.y
+        """
+        self.poses.extend(self.poses)
+        self.poses.extend(self.poses)
+        #self.poses.extend(self.poses)
+        #self.poses.extend(self.poses)
 
 e = Ellipse(size_x=0.1, size_y=0.05, points=10, repeat=2)
 
