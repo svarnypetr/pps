@@ -142,7 +142,6 @@ class DistanceMarkers(object):
         sphere_marker.id = 0
         sphere_marker.header.frame_id = '/world'
         sphere_marker.header.stamp = rospy.Time(0)
-        sphere_marker.header.stamp = rospy.Time(0)
         sphere_marker.type = sphere_marker.SPHERE
         sphere_marker.action = sphere_marker.MODIFY
         sphere_marker.scale.x = size[0]
