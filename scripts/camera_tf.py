@@ -48,7 +48,7 @@ def create_camera_marker(trans, size=(0.005, 0.005, 0.005), color=(1.0, 1.0, 1.0
 
 def update_camera_marker(tf_listener):
     try:
-        (trans, rot) = tf_listener.lookupTransform('/world', '/camera', rospy.Time(0))
+        (trans, rot) = tf_listener.lookupTransform('/world', 'camera_link', rospy.Time(0))
         camera_marker = create_camera_marker(trans)
         publisher.publish(camera_marker)
 
@@ -58,18 +58,18 @@ def update_camera_marker(tf_listener):
 
 if __name__ == '__main__':
     rospy.init_node('camera_tf_broadcaster')
-    br = tf.TransformBroadcaster()
+    # br = tf.TransformBroadcaster()
     listener = tf.TransformListener()
     rate = rospy.Rate(10.0)
 
-    publisher = rospy.Publisher('camera', Marker, queue_size=100)
+    publisher = rospy.Publisher('camera_link', Marker, queue_size=100)
 
     while not rospy.is_shutdown():
-        br.sendTransform((-1.0, -1.0, 1.0),
-                         quaternion_from_euler(-1.5707, 0, -1.5707),
-                         rospy.Time.now(),
-                         "camera",
-                         "r2_link_0")
+        # br.sendTransform((-1.0, -1.0, 1.0),
+        #                  quaternion_from_euler(-1.5707, 0, -1.5707),
+        #                  rospy.Time.now(),
+        #                  "camera",
+        #                  "r2_link_0")
         update_camera_marker(listener)
 
         rate.sleep()

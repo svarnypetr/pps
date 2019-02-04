@@ -38,17 +38,16 @@ class PeriPersonalSpaceChecker(object):
     Checks if robots PPS was interfered
     """
     def __init__(self,
-                 listener_instance,
                  pair_array=np.nan,
                  keypoints=[],
                  topic_alert='pps_alert',
                  topic_status='pps_status',
-                 stop_threshold=1.6,
-                 warning_threshold=1.9,
+                 stop_threshold=1.0,
+                 warning_threshold=2.0,
                  robot_coef=[],
                  obstacle_coef=[],
                  ):
-
+        self.listener = tf.TransformListener()
         self.publisher = rospy.Publisher(topic_alert, String, queue_size=10)
         self.publisher_status = rospy.Publisher(topic_status, Int8, queue_size=10)
         self.current_positions = np.nan
@@ -83,10 +82,10 @@ class PeriPersonalSpaceChecker(object):
             return False
 
         while no_set_coeffs(robot_coef, obstacle_coef):
-            robot_coeffgen = CoefficientGenerator(listener_instance, self.keypoints[0])
+            robot_coeffgen = CoefficientGenerator(self.listener, self.keypoints[0])
             robot_coef = robot_coeffgen.calculate_coefficients()
 
-            obstacle_coeffgen = CoefficientGenerator(listener_instance, self.keypoints[1])
+            obstacle_coeffgen = CoefficientGenerator(self.listener, self.keypoints[1])
             obstacle_coef = obstacle_coeffgen.calculate_coefficients()
 
         print ('COEFFICIENTS GENERATION')  # WIP
@@ -97,7 +96,6 @@ class PeriPersonalSpaceChecker(object):
 
         self.stop_threshold_mat = self.get_threshold_mat(self.stop_threshold)
         self.warning_threshold_mat = self.get_threshold_mat(self.warning_threshold)
-
 
     @staticmethod
     def make_combinations(keypoints):
@@ -197,7 +195,9 @@ class PeriPersonalSpaceChecker(object):
         all_keypoints = self.flatten(self.keypoints)
         for keypoint in all_keypoints:
             try:
-                (transform, rotation) = listener.lookupTransform('/world', keypoint, rospy.Time(0))
+                # (transform, rotation) = listener.lookupTransform('/world', keypoint, rospy.Time(0))
+                (transform, rotation) = self.listener.lookupTransform('/r1_link_0', keypoint, rospy.Time(0))
+                print(transform)
                 current_positions[keypoint] = transform
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 current_positions[keypoint] = np.nan
@@ -223,6 +223,7 @@ class PeriPersonalSpaceChecker(object):
         return also indexes of these parts
         """
         min_idx = np.unravel_index(diff_mat.argmin(), diff_mat.shape)
+        print(diff_mat)
 
         if diff_mat[min_idx[0]][min_idx[1]] < 0:
             return True
@@ -298,7 +299,7 @@ class PeriPersonalSpaceChecker(object):
             # print('Warning')
             # print(alarm_dict_output)
         if self.is_pps_incursion(stop_diff_matrix):
-            alarm_dict_output['status'] = 0
+            alarm_dict_output['status'] = 2
             alarm_dict_output['keypoints'].update(self.get_incursion_points(stop_diff_matrix, 'stop'))
             alarm_dict_output['reason'] = 'Stopping threshold exceeded.'
             # print('STOP')
@@ -344,7 +345,7 @@ if __name__ == "__main__":
     # obst_coef = [0, 0]
 
     try:
-        listener = tf.TransformListener()
+
 
         # pairs = np.array([['/r1_ee', '/r2_ee'],
         #                   ['/r1_link_7', '/r2_link_7'],
@@ -354,13 +355,12 @@ if __name__ == "__main__":
         #
         # pps = PeriPersonalSpaceChecker(listener, pair_array=pairs)
 
-        keypoints = [['/0'], ['/r2_ee', '/r2_link_0']]
-        pps = PeriPersonalSpaceChecker(listener,
-                                       keypoints=keypoints,)
+        keypoints = [['/7'], ['/r1_ee', '/r1_link_0']]
+        pps = PeriPersonalSpaceChecker(keypoints=keypoints,)
         #                                # robot_coef=robot_coef,
         #                                # obstacle_coef=obst_coef)
         # #
-        coeffgen = CoefficientGenerator(listener, keypoints[0])
+        coeffgen = CoefficientGenerator(pps.listener, keypoints[0])
 
         rate = rospy.Rate(10.0)
         while not rospy.is_shutdown():

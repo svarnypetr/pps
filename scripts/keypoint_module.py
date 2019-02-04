@@ -79,7 +79,7 @@ try:
 
         interesting = head + upper_body
         kpt_names = [str(x) for x in interesting]
-        robot_keypoints = ['/r2_ee', '/r2_link_0']
+        robot_keypoints = ['/r1_ee', '/r1_link_0']
 
         if keypoints.any() and depth_image.any():
             interest_kpts = keypoints[0][interesting, :]
@@ -97,7 +97,7 @@ try:
                                  quaternion_from_euler(0, 0, 0),
                                  rospy.Time.now(),
                                  kpt_names[idx],
-                                 'camera')
+                                 'camera_link')
 
                 # try:
                 #     (trans, rot) = listener.lookupTransform('/r2_ee', str(idx), rospy.Time(0))
