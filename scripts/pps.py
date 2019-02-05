@@ -6,9 +6,9 @@ import numpy as np
 
 import rospy
 import tf
-from coefficient_generator import CoefficientGenerator
-from rospy_message_converter import message_converter
+
 from std_msgs.msg import String, Int8
+from pps_setup import CoefficientGenerator
 
 
 class PeriPersonalSpaceChecker(object):
@@ -18,7 +18,7 @@ class PeriPersonalSpaceChecker(object):
     def __init__(self,
                  pair_array=np.nan,
                  keypoints=[],
-                 topic_alert='pps_alert',
+                 topic_alert='pps_message',
                  topic_status='pps_status',
                  stop_threshold=1.0,
                  warning_threshold=2.0,
@@ -46,6 +46,20 @@ class PeriPersonalSpaceChecker(object):
                 pairs = np.append(pairs, [[robot_keypoint, obstacle_keypoint]], axis=0)
         return pairs[1:, :]
 
+    def construct_pps_message(self, pairs, pair_states):
+        max_status = max(pair_states)
+        max_pairs = [x[0] for x in zip(pairs, pair_states) if x[1] == max_status]
+        verbose = {0: 'OK',
+                   1: 'WARNING',
+                   2: 'STOP'
+                   }
+        pps_message_output = {'status': max_status,
+                              'pairs': max_pairs,
+                              'status_verbose': verbose[max_status]
+                              }
+
+        return pps_message_output
+
     def check_pps(self):
 
         pairs = self.make_combinations(self.keypoints)
@@ -54,7 +68,7 @@ class PeriPersonalSpaceChecker(object):
         for pair in pairs:
             try:
                 (transform, rotation) = self.listener.lookupTransform(pair[0], pair[1], rospy.Time(0))
-                print('found transform')
+                print('found transform')  # WIP
                 if np.linalg.norm(transform) < 0.6:
                     # STOP
                     pair_states.append(2)
@@ -65,16 +79,19 @@ class PeriPersonalSpaceChecker(object):
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 pair_states.append(1)
 
-        print('pair and their statuses: {} {}'.format(pairs, pair_states))
+        print('pair and their statuses: {} {}'.format(pairs, pair_states))  # WIP
         self.publisher_status.publish(max(pair_states))
+        pps_message = self.construct_pps_message(pairs, pair_states)
+        self.publisher.publish(str(pps_message))
 
 
 if __name__ == "__main__":
     node_name = 'pps'
     rospy.init_node(node_name)
 
-    keypoints = [['/r1_ee', '/r1_link_0'], ['/7']]
+    keypoints = [['/r1_ee', '/r1_link_0'], ['/7', '/0']]
     pps = PeriPersonalSpaceChecker(keypoints=keypoints)
+    coeffgen = CoefficientGenerator(pps.listener, keypoints[0])
 
     rate = rospy.Rate(10.0)
     while not rospy.is_shutdown():

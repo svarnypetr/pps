@@ -6,6 +6,12 @@ from tf.transformations import quaternion_from_euler
 from geometry_msgs.msg import Point
 from visualization_msgs.msg import Marker
 
+BROADCAST_TF = True
+# CAM_COORD = (-1.0, -1.0, 1.0)
+# CAM_QUAT = quaternion_from_euler(-1.5707, 0, -1.5707)
+CAM_COORD = (1.678, 0.912, 0.429)
+CAM_QUAT = (-0.325, -0.62, 0.63, 0.334)
+
 
 def create_camera_marker(trans, size=(0.005, 0.005, 0.005), color=(1.0, 1.0, 1.0)):
     camera_marker = Marker()
@@ -29,7 +35,7 @@ def create_camera_marker(trans, size=(0.005, 0.005, 0.005), color=(1.0, 1.0, 1.0
     camera_marker.pose.orientation.w = 0.0
 =======
 
-    quaternion = quaternion_from_euler(-1.5707, 0, -1.5707)
+    quaternion = CAM_QUAT
 
     camera_marker.pose.orientation.x = quaternion[0]
     camera_marker.pose.orientation.y = quaternion[1]
@@ -60,12 +66,6 @@ if __name__ == '__main__':
 
     rospy.init_node('camera_tf_broadcaster')
 
-    BROADCAST_TF = True
-    # CAM_COORD = (-1.0, -1.0, 1.0)
-    # CAM_QUAT = quaternion_from_euler(-1.5707, 0, -1.5707)
-    CAM_COORD = (1.678, 0.912, 0.429)
-    CAM_QUAT = (-0.325, -0.62, 0.63, 0.334)
-
     if BROADCAST_TF:
         br = tf.TransformBroadcaster()
     listener = tf.TransformListener()
@@ -75,8 +75,8 @@ if __name__ == '__main__':
 
     while not rospy.is_shutdown():
         if BROADCAST_TF:
-            br.sendTransform(,
-                          ,
+            br.sendTransform(CAM_COORD,
+                          CAM_QUAT,
                           rospy.Time.now(),
                           "camera",
                           "r1_link_0")
