@@ -16,7 +16,7 @@ class PeriPersonalSpaceChecker(object):
     Checks if robots PPS was interfered
     """
     def __init__(self,
-                 pair_array=np.nan,
+                 pairs=np.nan,
                  keypoints=[],
                  topic_alert='pps_message',
                  topic_status='pps_status',
@@ -24,6 +24,7 @@ class PeriPersonalSpaceChecker(object):
                  warning_threshold=2.0,
                  ):
         self.keypoints = keypoints
+        self.pairs = pairs
         self.listener = tf.TransformListener()
         self.publisher = rospy.Publisher(topic_alert, String, queue_size=10)
         self.publisher_status = rospy.Publisher(topic_status, Int8, queue_size=10)
@@ -61,7 +62,6 @@ class PeriPersonalSpaceChecker(object):
         return pps_message_output
 
     def check_pps(self):
-
         pairs = self.make_combinations(self.keypoints)
 
         pair_states = []
