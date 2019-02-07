@@ -22,10 +22,20 @@ def create_camera_marker(trans, size=(0.005, 0.005, 0.005), color=(1.0, 1.0, 1.0
     camera_marker.color.r = color[0]
     camera_marker.color.g = color[1]
     camera_marker.color.b = color[2]
+<<<<<<< HEAD
     camera_marker.pose.orientation.x = 1.0
     camera_marker.pose.orientation.y = 0.0
     camera_marker.pose.orientation.z = 0.0
     camera_marker.pose.orientation.w = 0.0
+=======
+
+    quaternion = quaternion_from_euler(-1.5707, 0, -1.5707)
+
+    camera_marker.pose.orientation.x = quaternion[0]
+    camera_marker.pose.orientation.y = quaternion[1]
+    camera_marker.pose.orientation.z = quaternion[2]
+    camera_marker.pose.orientation.w = quaternion[3]
+>>>>>>> 3c9d43aa433676efe824c7a66b095d7ee6e93d0c
 
     p = Point()
     p.x = trans[0]
