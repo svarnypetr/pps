@@ -5,7 +5,10 @@ import numpy
 from capek_pycommander.capek_robot import CapekRobotCommander
 from moveit_msgs.msg import RobotState
 from geometry_msgs.msg import Pose
+from std_msgs.msg import Int8
 from copy import deepcopy
+
+STATE = 0
 
 # Initialize node and robot
 rospy.init_node("joint_space_move_example")
@@ -51,21 +54,51 @@ l_position.orientation.y = 1.0
 trajectories = list()
 template = [blue_mark, blue_down, blue_mark, green_mark, green_down, green_mark]
 for repetition in range(5):
-	if not repetition % 5:
-		trajectories.extend([l_position])
-	else:
-		trajectories.extend(template)
+    if not repetition % 5:
+        trajectories.extend([l_position])
+    else:
+        trajectories.extend(template)
 trajectories.extend([l_position])
 
-cartesian_plan, fraction = crc.group.compute_cartesian_path(trajectories, 0.1, 0.0, True)
-crc.display_trajectory(cartesian_plan)
-crc.execute_plan(cartesian_plan)
+cartesian_plan, fraction = crc.group.compute_cartesian_path(trajectories, 0.01, 0.0, True)
+#crc.display_trajectory(cartesian_plan)
+#crc.execute_plan(cartesian_plan)
+retimed_plan = crc.retime_trajectory(cartesian_plan, 0.1)
 
-# Go to the names position L
-# Set start state
-crc.group.set_start_state(RobotState())
-crc.group.clear_pose_targets()
-crc.group.allow_replanning(True)
 
-crc.move_l_position()
+def pps_callback(msg):
+    status = msg.data
+    if status == 2:
+        rospy.loginfo("Stop: Possible collision with human")
+        crc.stop()
+        crc.group.set_start_state(RobotState())
+        crc.group.clear_pose_targets()
+    if status == 3:
+        rospy.loginfo("Start: Executing plan from beginning")
+        crc.group.set_start_state(RobotState())
+        crc.group.clear_pose_targets()
+        crc.move_l_position()
+        crc.group.set_start_state(RobotState())
+        crc.group.clear_pose_targets()
+        crc.execute_plan_async(cartesian_plan)
+    if status == 4:
+        rospy.loginfo("Debugging: Executing plan from beginning at 20% of speed")
+        crc.group.set_start_state(RobotState())
+        crc.group.clear_pose_targets()
+        crc.move_l_position()
+        crc.group.set_start_state(RobotState())
+        crc.group.clear_pose_targets()
+        crc.execute_plan_async(retimed_plan)
+    if status == 5:
+        rospy.loginfo("Reset: Moving to the L position")
+        crc.group.set_start_state(RobotState())
+        crc.group.clear_pose_targets()
+        crc.group.allow_replanning(True)
+        crc.move_l_position()
+        crc.group.set_start_state(RobotState())
+        crc.group.clear_pose_targets()
 
+
+pps_subscriber = rospy.Subscriber("pps_status", Int8, pps_callback)
+
+rospy.spin()
