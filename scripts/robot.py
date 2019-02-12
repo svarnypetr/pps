@@ -12,6 +12,7 @@ rospy.init_node("joint_space_move_example")
 crc = CapekRobotCommander("r1")
 crc.group.set_planner_id("RRTConnectkConfigDefault")
 crc.group.set_pose_reference_frame("r1_link_0")
+crc.group.set_max_velocity_scaling_factor(1.0)
 
 # Go to the names position L
 crc.move_l_position()
@@ -49,15 +50,22 @@ l_position.orientation.y = 1.0
 
 trajectories = list()
 template = [blue_mark, blue_down, blue_mark, green_mark, green_down, green_mark]
-for repetition in range(15):
+for repetition in range(5):
 	if not repetition % 5:
 		trajectories.extend([l_position])
 	else:
 		trajectories.extend(template)
+trajectories.extend([l_position])
 
-cartesian_plan, fraction = crc.group.compute_cartesian_path(trajectories, 0.01, 0.0, True)
+cartesian_plan, fraction = crc.group.compute_cartesian_path(trajectories, 0.1, 0.0, True)
 crc.display_trajectory(cartesian_plan)
 crc.execute_plan(cartesian_plan)
 
 # Go to the names position L
+# Set start state
+crc.group.set_start_state(RobotState())
+crc.group.clear_pose_targets()
+crc.group.allow_replanning(True)
+
 crc.move_l_position()
+
