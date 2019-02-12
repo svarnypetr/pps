@@ -27,7 +27,7 @@ def get_int_coords(keypoints):
     return [x[:2].astype(int).tolist() for x in keypoints]
 
 
-show = True
+show = False
 align, depth_scale, openpose, pc, points, pipeline, profile = camera_setup(show)
 
 # Depth scale - units of the values inside a depth frame, i.e how to convert the value to units of 1 meter
@@ -79,7 +79,6 @@ try:
 
         interesting = head + upper_body
         kpt_names = [str(x) for x in interesting]
-        robot_keypoints = ['/r1_ee', '/r1_link_0']
 
         if keypoints.any() and depth_image.any():
             interest_kpts = keypoints[0][interesting, :]
@@ -98,20 +97,6 @@ try:
                                  rospy.Time.now(),
                                  kpt_names[idx],
                                  'camera_link')
-
-                # try:
-                #     (trans, rot) = listener.lookupTransform('/r2_ee', str(idx), rospy.Time(0))
-                #     dist = np.linalg.norm(trans)
-                #     print('Keypoint distance for {}: {}').format(str(idx), dist)
-                #     print('Deprojected: {}').format(distances[idx])
-                #
-                # #     if 0 < point[2] < 0.8:
-                # #         publisher.publish(2)
-                # #     elif point[2] > 4:
-                # #         publisher.publish(3)
-                # #     # print("Distance between the hands is = {0:f}".format(np.linalg.norm(trans)))
-                # except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                #     continue
 
         if show:
             # cv2.circle(depth_colormap, tuple(int_coords[0]), 5, (0, 0, 255), -1) #  WIP: Debug code for eval point

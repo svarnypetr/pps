@@ -16,23 +16,22 @@ class PeriPersonalSpaceChecker(object):
     Checks if robots PPS was interfered
     """
     def __init__(self,
-                 pairs=np.nan,
-                 keypoints=[],
+                 config,
                  topic_alert='pps_message',
                  topic_status='pps_status',
                  stop_threshold=1.0,
                  warning_threshold=2.0,
                  ):
-        self.keypoints = keypoints
-        self.pairs = pairs
+        self.keypoints = config['keypoints']
+        self.pairs = []
         self.listener = tf.TransformListener()
         self.publisher = rospy.Publisher(topic_alert, String, queue_size=10)
         self.publisher_status = rospy.Publisher(topic_status, Int8, queue_size=10)
         self.current_positions = np.nan
         self.distance_mat = np.nan
 
-        self.stop_threshold = stop_threshold
-        self.warning_threshold = warning_threshold
+        self.stop_threshold = config['stop_threshold']
+        self.slow_threshold = config['slow_threshold']
 
     @staticmethod
     def make_combinations(keypoints):
@@ -47,9 +46,9 @@ class PeriPersonalSpaceChecker(object):
                 pairs = np.append(pairs, [[robot_keypoint, obstacle_keypoint]], axis=0)
         return pairs[1:, :]
 
-    def construct_pps_message(self, pairs, pair_states):
+    def construct_pps_message(self, pair_states):
         max_status = max(pair_states)
-        max_pairs = [x[0] for x in zip(pairs, pair_states) if x[1] == max_status]
+        max_pairs = [x[0] for x in zip(self.pairs, pair_states) if x[1] == max_status]
         verbose = {0: 'OK',
                    1: 'WARNING',
                    2: 'STOP'
@@ -58,18 +57,16 @@ class PeriPersonalSpaceChecker(object):
                               'pairs': max_pairs,
                               'status_verbose': verbose[max_status]
                               }
-
         return pps_message_output
 
     def check_pps(self):
-        pairs = self.make_combinations(self.keypoints)
+        self.pairs = self.make_combinations(self.keypoints)
 
         pair_states = []
-        for pair in pairs:
+        for index, pair in enumerate(self.pairs):
             try:
                 (transform, rotation) = self.listener.lookupTransform(pair[0], pair[1], rospy.Time(0))
-                print('found transform')  # WIP
-                if np.linalg.norm(transform) < 0.6:
+                if np.linalg.norm(transform) < self.stop_threshold[index]:
                     # STOP
                     pair_states.append(2)
                 else:
@@ -79,9 +76,9 @@ class PeriPersonalSpaceChecker(object):
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 pair_states.append(1)
 
-        print('pair and their statuses: {} {}'.format(pairs, pair_states))  # WIP
+        print('\n'.join([str(x) for x in zip(self.pairs, pair_states)]))  # WIP
         self.publisher_status.publish(max(pair_states))
-        pps_message = self.construct_pps_message(pairs, pair_states)
+        pps_message = self.construct_pps_message(pair_states)
         self.publisher.publish(str(pps_message))
 
 
@@ -89,9 +86,45 @@ if __name__ == "__main__":
     node_name = 'pps'
     rospy.init_node(node_name)
 
-    keypoints = [['/r1_ee', '/r1_link_0'], ['/7', '/0']]
-    pps = PeriPersonalSpaceChecker(keypoints=keypoints)
-    coeffgen = CoefficientGenerator(pps.listener, keypoints[0])
+    all_human_keypoints = ['/'+str(x) for x in range(8)] + ['/14', '/15', '/16', '/17']
+    robot_base = ['/r1_link_0']
+    moving_robot = ['/r1_link_'+str(x) for x in range(2, 8)] + ['/r1_ee']
+    human_hands = ['/4', '/7']
+
+    scenarios = [
+                    {'keypoints': [robot_base, all_human_keypoints],
+                     'stop_threshold': [0.8] * len(all_human_keypoints),
+                     'slow_threshold': [0] * len(all_human_keypoints),
+                     'name': 'scenario 0 stop zone',
+                     },
+                    {'keypoints': [robot_base, all_human_keypoints],
+                     'stop_threshold': [0.4] * len(all_human_keypoints),
+                     'slow_threshold': [0.8] * len(all_human_keypoints),
+                     'name': 'scenario 1 warning and stop zone',
+                     },
+                    {'keypoints': [moving_robot, all_human_keypoints],
+                     'stop_threshold': [1] * len(all_human_keypoints),
+                     'slow_threshold': [0] * len(all_human_keypoints),
+                     'name': 'scenario 2 keypoint stop',
+                     },
+                    {'keypoints': [moving_robot, all_human_keypoints],
+                     'stop_threshold': [0.4] * len(all_human_keypoints),
+                     'slow_threshold': [1] * len(all_human_keypoints),
+                     'name': 'scenario 3 keypoint warning and stop',
+                     },
+                ]
+
+    config = scenarios[0]
+    '''
+    Experiment scenarios 
+    0 - distance only from base, stopping
+    1 - distance only from base, slowing down 
+    2 - all keypoints taken into account, only stopping
+    3 - all keypoints taken into account, slowing down
+    '''
+
+    pps = PeriPersonalSpaceChecker(config)
+    coeffgen = CoefficientGenerator(pps.listener, config['keypoints'][0])
 
     rate = rospy.Rate(10.0)
     while not rospy.is_shutdown():
