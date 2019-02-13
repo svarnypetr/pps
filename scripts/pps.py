@@ -19,16 +19,13 @@ class PeriPersonalSpaceChecker(object):
                  config,
                  topic_alert='pps_message',
                  topic_status='pps_status',
-                 stop_threshold=1.0,
-                 warning_threshold=2.0,
                  ):
         self.keypoints = config['keypoints']
         self.pairs = []
         self.listener = tf.TransformListener()
         self.publisher = rospy.Publisher(topic_alert, String, queue_size=10)
         self.publisher_status = rospy.Publisher(topic_status, Int8, queue_size=10)
-        self.current_positions = np.nan
-        self.distance_mat = np.nan
+        self.pps_status = ''
 
         self.stop_threshold = config['stop_threshold']
         self.slow_threshold = config['slow_threshold']
@@ -85,8 +82,13 @@ class PeriPersonalSpaceChecker(object):
             except IndexError:
                 import ipdb; ipdb.set_trace()
 
-        print('\n'.join([str(x) for x in zip(self.pairs, pair_states)]))  # WIP
-        self.publisher_status.publish(max(pair_states))
+        # print('\n'.join([str(x) for x in zip(self.pairs, pair_states)]))  # WIP
+
+        new_status = max(pair_states)
+        if self.pps_status != new_status:
+            # print('new: {} old: {}'.format(new_status, self.pps_status))  # WIP
+            self.publisher_status.publish(new_status)
+            self.pps_status = new_status
         pps_message = self.construct_pps_message(pair_states)
         self.publisher.publish(str(pps_message))
 
