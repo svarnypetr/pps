@@ -27,7 +27,7 @@ def get_int_coords(keypoints):
     return [x[:2].astype(int).tolist() for x in keypoints]
 
 
-show = False
+show = True
 align, depth_scale, openpose, pc, points, pipeline, profile = camera_setup(show)
 
 # Depth scale - units of the values inside a depth frame, i.e how to convert the value to units of 1 meter
@@ -44,7 +44,6 @@ try:
     while True:
         # Get frameset of color and depth
         frames = pipeline.wait_for_frames()
-        # frames.get_depth_frame() is a 640x360 depth image
 
         # Align the depth frame to color frame
         aligned_frames = align.process(frames)

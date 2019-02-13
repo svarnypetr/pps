@@ -11,7 +11,7 @@ import json
 DS5_product_ids = ["0AD1", "0AD2", "0AD3", "0AD4", "0AD5", "0AF6", "0AFE", "0AFF", "0B00", "0B01", "0B03", "0B07"]
 
 
-def find_device_that_supports_advanced_mode() :
+def find_device_that_supports_advanced_mode():
     ctx = rs.context()
     ds5_dev = rs.device()
     devices = ctx.query_devices();
@@ -108,8 +108,7 @@ def camera_setup(show):
     # Create a config and configure the pipeline to stream
     #  different resolutions of color and depth streams
     config = rs.config()
-    # config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-    # config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+    # This is the minimal recommended resolution
     config.enable_stream(rs.stream.depth,  848, 480, rs.format.z16, 90)
     config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
 

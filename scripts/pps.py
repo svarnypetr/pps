@@ -51,7 +51,8 @@ class PeriPersonalSpaceChecker(object):
         max_pairs = [x[0] for x in zip(self.pairs, pair_states) if x[1] == max_status]
         verbose = {0: 'OK',
                    1: 'WARNING',
-                   2: 'STOP'
+                   2: 'STOP',
+                   4: 'SLOW',
                    }
         pps_message_output = {'status': max_status,
                               'pairs': max_pairs,
@@ -63,23 +64,41 @@ class PeriPersonalSpaceChecker(object):
         self.pairs = self.make_combinations(self.keypoints)
 
         pair_states = []
-        for index, pair in enumerate(self.pairs):
+        for pair in self.pairs:
             try:
                 (transform, rotation) = self.listener.lookupTransform(pair[0], pair[1], rospy.Time(0))
-                if np.linalg.norm(transform) < self.stop_threshold[index]:
+                if np.linalg.norm(transform) < self.stop_threshold[pair[1]]:
                     # STOP
                     pair_states.append(2)
+                elif np.linalg.norm(transform) < self.slow_threshold[pair[1]]:
+                    # SLOW
+                    pair_states.append(4)
                 else:
                     # ALL OK
                     pair_states.append(0)
 
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 pair_states.append(1)
+            except IndexError:
+                import ipdb; ipdb.set_trace()
 
         print('\n'.join([str(x) for x in zip(self.pairs, pair_states)]))  # WIP
         self.publisher_status.publish(max(pair_states))
         pps_message = self.construct_pps_message(pair_states)
         self.publisher.publish(str(pps_message))
+
+
+def generate_uni_thresholds(keypoints, thr):
+    """
+    For a set of keypoints generates uniform threshold values.
+    keypoints: {list} of str
+    thr: {float}
+    :return: {dict}
+    """
+    uniform_thresholds = {}
+    for kpt in keypoints:
+        uniform_thresholds[kpt] = thr
+    return uniform_thresholds
 
 
 if __name__ == "__main__":
@@ -93,28 +112,28 @@ if __name__ == "__main__":
 
     scenarios = [
                     {'keypoints': [robot_base, all_human_keypoints],
-                     'stop_threshold': [0.8] * len(all_human_keypoints),
-                     'slow_threshold': [0] * len(all_human_keypoints),
+                     'stop_threshold': generate_uni_thresholds(all_human_keypoints, 1),
+                     'slow_threshold': generate_uni_thresholds(all_human_keypoints, 0),
                      'name': 'scenario 0 stop zone',
                      },
                     {'keypoints': [robot_base, all_human_keypoints],
-                     'stop_threshold': [0.4] * len(all_human_keypoints),
-                     'slow_threshold': [0.8] * len(all_human_keypoints),
+                     'stop_threshold': generate_uni_thresholds(all_human_keypoints, 0.6),
+                     'slow_threshold': generate_uni_thresholds(all_human_keypoints, 1),
                      'name': 'scenario 1 warning and stop zone',
                      },
                     {'keypoints': [moving_robot, all_human_keypoints],
-                     'stop_threshold': [1] * len(all_human_keypoints),
-                     'slow_threshold': [0] * len(all_human_keypoints),
+                     'stop_threshold': generate_uni_thresholds(all_human_keypoints, 1),
+                     'slow_threshold': generate_uni_thresholds(all_human_keypoints, 0),
                      'name': 'scenario 2 keypoint stop',
                      },
                     {'keypoints': [moving_robot, all_human_keypoints],
-                     'stop_threshold': [0.4] * len(all_human_keypoints),
-                     'slow_threshold': [1] * len(all_human_keypoints),
+                     'stop_threshold': generate_uni_thresholds(all_human_keypoints, 0.6),
+                     'slow_threshold': generate_uni_thresholds(all_human_keypoints, 1),
                      'name': 'scenario 3 keypoint warning and stop',
                      },
                 ]
 
-    config = scenarios[0]
+    config = scenarios[2]
     '''
     Experiment scenarios 
     0 - distance only from base, stopping
