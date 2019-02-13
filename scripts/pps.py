@@ -67,10 +67,13 @@ class PeriPersonalSpaceChecker(object):
         for pair in self.pairs:
             try:
                 (transform, rotation) = self.listener.lookupTransform(pair[0], pair[1], rospy.Time(0))
-                if np.linalg.norm(transform) < self.stop_threshold[pair[1]]:
+                stop_threshold = min(self.stop_threshold[pair[0]], self.stop_threshold[pair[0]])
+                slow_threshold = min(self.slow_threshold[pair[0]], self.slow_threshold[pair[1]])
+
+                if np.linalg.norm(transform) < stop_threshold:
                     # STOP
                     pair_states.append(2)
-                elif np.linalg.norm(transform) < self.slow_threshold[pair[1]]:
+                elif np.linalg.norm(transform) < slow_threshold:
                     # SLOW
                     pair_states.append(4)
                 else:
@@ -112,23 +115,31 @@ if __name__ == "__main__":
 
     scenarios = [
                     {'keypoints': [robot_base, all_human_keypoints],
-                     'stop_threshold': generate_uni_thresholds(all_human_keypoints, 1),
-                     'slow_threshold': generate_uni_thresholds(all_human_keypoints, 0),
+                     'stop_threshold': generate_uni_thresholds(
+                                        all_human_keypoints + robot_base, 1),
+                     'slow_threshold': generate_uni_thresholds(
+                                        all_human_keypoints + robot_base, 0),
                      'name': 'scenario 0 stop zone',
                      },
                     {'keypoints': [robot_base, all_human_keypoints],
-                     'stop_threshold': generate_uni_thresholds(all_human_keypoints, 0.6),
-                     'slow_threshold': generate_uni_thresholds(all_human_keypoints, 1),
+                     'stop_threshold': generate_uni_thresholds(
+                                        all_human_keypoints + robot_base, 0.6),
+                     'slow_threshold': generate_uni_thresholds(
+                                        all_human_keypoints + robot_base, 1),
                      'name': 'scenario 1 warning and stop zone',
                      },
                     {'keypoints': [moving_robot, all_human_keypoints],
-                     'stop_threshold': generate_uni_thresholds(all_human_keypoints, 1),
-                     'slow_threshold': generate_uni_thresholds(all_human_keypoints, 0),
+                     'stop_threshold': generate_uni_thresholds(
+                                        all_human_keypoints + moving_robot, 1),
+                     'slow_threshold': generate_uni_thresholds(
+                                        all_human_keypoints + moving_robot, 0),
                      'name': 'scenario 2 keypoint stop',
                      },
                     {'keypoints': [moving_robot, all_human_keypoints],
-                     'stop_threshold': generate_uni_thresholds(all_human_keypoints, 0.6),
-                     'slow_threshold': generate_uni_thresholds(all_human_keypoints, 1),
+                     'stop_threshold': generate_uni_thresholds(
+                                        all_human_keypoints + moving_robot, 0.6),
+                     'slow_threshold': generate_uni_thresholds(
+                                        all_human_keypoints + moving_robot, 1),
                      'name': 'scenario 3 keypoint warning and stop',
                      },
                 ]
