@@ -16,7 +16,7 @@ from camera_setup import camera_setup
 
 def get_distances(coord_tuples, depth_img, scale):
     def in_bound(coord):
-        return int(coord[0]) < 848 and int(coord[1]) < 480
+        return int(coord[0]) < 848 and int(coord[1]) < 480 and coord[2] > 0.6
 
     # Needs to be switched for Openpose/RS have different coord systems
     return [depth_img[int(x[1]), int(x[0])] * scale
@@ -81,7 +81,7 @@ try:
 
         if keypoints.any() and depth_image.any():
             interest_kpts = keypoints[0][interesting, :]
-            # print(interest_kpts[0])
+            # print(interest_kpts) # [0]
 
             distances_to_camera = get_distances(interest_kpts, depth_image, depth_scale)
 

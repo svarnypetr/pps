@@ -67,10 +67,10 @@ class PeriPersonalSpaceChecker(object):
                 stop_threshold = min(self.stop_threshold[pair[0]], self.stop_threshold[pair[0]])
                 slow_threshold = min(self.slow_threshold[pair[0]], self.slow_threshold[pair[1]])
 
-                if np.linalg.norm(transform) < stop_threshold:
+                if 0 < np.linalg.norm(transform) < stop_threshold:
                     # STOP
                     pair_states.append(2)
-                elif np.linalg.norm(transform) < slow_threshold:
+                elif 0 < np.linalg.norm(transform) < slow_threshold:
                     # SLOW
                     pair_states.append(4)
                 else:
@@ -159,10 +159,20 @@ if __name__ == "__main__":
     coeffgen = CoefficientGenerator(pps.listener, config['keypoints'][0])
 
     rate = rospy.Rate(10.0)
+    f = open('py_data.csv', 'a')
     while not rospy.is_shutdown():
 
         pps.check_pps()
+        #
+        # Speed calculation
+        # try:
+        #     twist = pps.listener.lookupTwist('r1_ee', 'r1_link_0', rospy.Time(), rospy.Duration.from_sec(0.1))
+        #     print(np.linalg.norm(twist[0]))
+        #     # print(twist[0])
+        # except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+        #     print('none')
 
         rate.sleep()
 
+    f.close()
     rospy.spin()

@@ -122,7 +122,9 @@ def camera_setup(show):
     # Create an align object
     # rs.align allows us to perform alignment of depth frames to others frames
     # The "align_to" is the stream type to which we plan to align depth frames.
-    align_to = rs.stream.depth
+    # align_to = rs.stream.depth
+    align_to = rs.stream.color
+
     align = rs.align(align_to)
 
     print("Camera setup ready.")
