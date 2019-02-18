@@ -72,8 +72,8 @@ try:
         keypoints, output_image = openpose.forward(color_image, True)
 
         # OpenPose Keypoint indexes
-        head = [0, 14, 15, 16, 17]
-        upper_body = [1, 2, 3, 4, 5, 6, 7]
+        head = [0, 1, 14, 15, 16, 17]
+        upper_body = [2, 3, 4, 5, 6, 7]
         lower_body = [8, 9, 10, 11, 12, 13]
 
         interesting = head + upper_body

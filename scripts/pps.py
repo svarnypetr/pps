@@ -115,6 +115,9 @@ if __name__ == "__main__":
     moving_robot = ['/r1_link_'+str(x) for x in range(2, 8)] + ['/r1_ee']
     human_hands = ['/4', '/7']
 
+    head_thr = generate_uni_thresholds(all_human_keypoints + moving_robot, 0)
+    head_thr.update({'/0': 0.6, '/1': 0.6, '/14': 0.6, '/15': 0.6, '/16': 0.6, '/17': 0.6})
+
     scenarios = [
                     {'keypoints': [robot_base, all_human_keypoints],
                      'stop_threshold': generate_uni_thresholds(
@@ -144,15 +147,22 @@ if __name__ == "__main__":
                                         all_human_keypoints + moving_robot, 1),
                      'name': 'scenario 3 keypoint warning and stop',
                      },
+                    {'keypoints': [moving_robot, all_human_keypoints],
+                     'stop_threshold': head_thr,
+                     'slow_threshold': generate_uni_thresholds(
+                                        all_human_keypoints + moving_robot, 1),
+                     'name': 'scenario 4 keypoint warning and stop',
+                     },
                 ]
 
-    config = scenarios[2]
+    config = scenarios[4]
     '''
     Experiment scenarios 
     0 - distance only from base, stopping
     1 - distance only from base, slowing down 
     2 - all keypoints taken into account, only stopping
     3 - all keypoints taken into account, slowing down
+    4 - all keypoints taken into account, stopping only on head
     '''
 
     pps = PeriPersonalSpaceChecker(config)
