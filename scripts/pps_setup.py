@@ -94,9 +94,12 @@ class CoefficientGenerator:
             return re.findall('(?<=Frame ).*(?='+child_str+')', frames)
 
         def transform_zero(kp1, kp2):
-            transform, rotation = self.listener.lookupTransform(kp1, kp2, rospy.Time())
-            if transform == [0, 0, 0]:
-                return True
+            try:
+                transform, rotation = self.listener.lookupTransform(kp1, kp2, rospy.Time())
+                if transform == [0, 0, 0]:
+                    return True
+            finally:
+                return False
             return False
 
         def calculate_earlier_parent(frames, kp, parent):
