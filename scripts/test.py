@@ -9,7 +9,7 @@ from math import radians
 REACHED_DESTINATION = False
 CURRENT_JOINT_VALUES = None
 STATUS = 0
-N = 5
+N = 100
 REPETITION = 0
 TRAJECTORY = list()
 
@@ -108,7 +108,6 @@ if __name__ == '__main__':
                 while not REACHED_DESTINATION:
                     rate.sleep()
                 set_path_parameters(robot_speed=0.2)
-                STATUS = 0
             
             if STATUS == 3:
                 move_joint_space(
@@ -124,4 +123,3 @@ if __name__ == '__main__':
                 while not REACHED_DESTINATION:
                     rate.sleep()
                 set_path_parameters(robot_speed=1.0)
-                STATUS = 0
