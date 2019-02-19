@@ -40,6 +40,16 @@ rate = rospy.Rate(10.0)
 listener = tf.TransformListener()
 publisher = rospy.Publisher("pps_status", Int8, queue_size=1000)
 
+# OpenPose Keypoint indexes
+head = [0, 1, 14, 15, 16, 17]
+upper_body = [2, 3, 4, 5, 6, 7]
+lower_body = [8, 9, 10, 11, 12, 13]
+
+interesting = head + upper_body
+kpt_names = [str(x) for x in interesting]
+
+body_constraints = []
+
 try:
     while True:
         # Get frameset of color and depth
@@ -71,14 +81,6 @@ try:
 
         keypoints, output_image = openpose.forward(color_image, True)
 
-        # OpenPose Keypoint indexes
-        head = [0, 1, 14, 15, 16, 17]
-        upper_body = [2, 3, 4, 5, 6, 7]
-        lower_body = [8, 9, 10, 11, 12, 13]
-
-        interesting = head + upper_body
-        kpt_names = [str(x) for x in interesting]
-
         if keypoints.any() and depth_image.any():
             interest_kpts = keypoints[0][interesting, :]
             # print(interest_kpts) # [0]
@@ -88,6 +90,11 @@ try:
             int_coords = get_int_coords(interest_kpts)
             distances = get_distances(interest_kpts, depth_image, depth_scale)
             point_lst = [rs.rs2_deproject_pixel_to_point(depth_intrin, x, y) for x, y in zip(int_coords, distances)]
+
+            if interest_kpts.all() and not body_constraints:
+                print('interest and not body')
+            if body_constraints:
+                print('body')
 
             # print("distance to camera for mid: {}".format(depth_image[424, 240] * depth_scale))
             for idx, pt in enumerate(point_lst):
