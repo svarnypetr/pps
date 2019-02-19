@@ -3,11 +3,12 @@ import rospy
 import math
 from iiwa_msgs.msg import JointPosition
 from iiwa_msgs.srv import SetPathParameters
-from std_msgs.msg import Time
+from std_msgs.msg import Time, Int8
 from math import radians
 
 REACHED_DESTINATION = False
 CURRENT_JOINT_VALUES = None
+STATUS = 0
 N = 10
 TRAJECTORY = list()
 
@@ -56,10 +57,8 @@ def set_path_parameters():
         # FIXME We set both parameters 0.1, a velocity exeption occurs 
         joint_relative_velocity = 0.2
         joint_relative_acceleration = 0.1
-        # override_joint_acceleration = 0.1
         print(client(joint_relative_velocity=joint_relative_velocity,
-               joint_relative_acceleration=joint_relative_acceleration,
-               ))
+               joint_relative_acceleration=joint_relative_acceleration))
         print('Path parameter set.')
 
 def get_current_joint_values(msg):
@@ -67,24 +66,35 @@ def get_current_joint_values(msg):
     CURRENT_JOINT_VALUES = msg.position
     rospy.loginfo("Current joint values {}".format(CURRENT_JOINT_VALUES))
 
+def pps_callback(msg):
+    global STATUS
+    STATUS = msg.data
+
+    if STATUS == 1:
+        set_path_parameters()
+
 if __name__ == '__main__':
     rospy.init_node("move_robot", anonymous=True)
     rospy.Subscriber("/r1/state/DestinationReached", Time, reached_destination)
     rospy.Subscriber("/iiwa/state/JointPosition", JointPosition, get_current_joint_values)
+    pps_subscriber = rospy.Subscriber("pps_status", Int8, pps_callback)
 
     REACHED_DESTINATION = False
     while not rospy.is_shutdown() and not REACHED_DESTINATION:
-        move_home()
+        move_l_position()
+    
+    set_path_parameters()
 
     for index, position in enumerate(TRAJECTORY):
         REACHED_DESTINATION = False
         while not rospy.is_shutdown() and not REACHED_DESTINATION:
-            move_joint_space(
-                position[0], 
-                position[1], 
-                position[2], 
-                position[3], 
-                position[4],
-                position[5],
-                position[6]
-            )
+            if not STATUS == 2:
+                move_joint_space(
+                    position[0], 
+                    position[1], 
+                    position[2], 
+                    position[3], 
+                    position[4],
+                    position[5],
+                    position[6]
+                )
