@@ -16,7 +16,7 @@ from camera_setup import camera_setup
 
 def get_distances(coord_tuples, depth_img, scale):
     def in_bound(coord):
-        return int(coord[0]) < 848 and int(coord[1]) < 480
+        return int(coord[0]) < 848 and int(coord[1]) < 480 and coord[2] > 0.6
 
     # Needs to be switched for Openpose/RS have different coord systems
     return [depth_img[int(x[1]), int(x[0])] * scale
@@ -44,7 +44,6 @@ try:
     while True:
         # Get frameset of color and depth
         frames = pipeline.wait_for_frames()
-        # frames.get_depth_frame() is a 640x360 depth image
 
         # Align the depth frame to color frame
         aligned_frames = align.process(frames)
@@ -73,17 +72,16 @@ try:
         keypoints, output_image = openpose.forward(color_image, True)
 
         # OpenPose Keypoint indexes
-        head = [0, 14, 15, 16, 17]
-        upper_body = [1, 2, 3, 4, 5, 6, 7]
+        head = [0, 1, 14, 15, 16, 17]
+        upper_body = [2, 3, 4, 5, 6, 7]
         lower_body = [8, 9, 10, 11, 12, 13]
 
         interesting = head + upper_body
         kpt_names = [str(x) for x in interesting]
-        robot_keypoints = ['/r2_ee', '/r2_link_0']
 
         if keypoints.any() and depth_image.any():
             interest_kpts = keypoints[0][interesting, :]
-            # print(interest_kpts[0])
+            # print(interest_kpts) # [0]
 
             distances_to_camera = get_distances(interest_kpts, depth_image, depth_scale)
 
@@ -97,21 +95,7 @@ try:
                                  quaternion_from_euler(0, 0, 0),
                                  rospy.Time.now(),
                                  kpt_names[idx],
-                                 'camera')
-
-                # try:
-                #     (trans, rot) = listener.lookupTransform('/r2_ee', str(idx), rospy.Time(0))
-                #     dist = np.linalg.norm(trans)
-                #     print('Keypoint distance for {}: {}').format(str(idx), dist)
-                #     print('Deprojected: {}').format(distances[idx])
-                #
-                # #     if 0 < point[2] < 0.8:
-                # #         publisher.publish(2)
-                # #     elif point[2] > 4:
-                # #         publisher.publish(3)
-                # #     # print("Distance between the hands is = {0:f}".format(np.linalg.norm(trans)))
-                # except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                #     continue
+                                 'camera_link')
 
         if show:
             # cv2.circle(depth_colormap, tuple(int_coords[0]), 5, (0, 0, 255), -1) #  WIP: Debug code for eval point
