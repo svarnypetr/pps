@@ -19,18 +19,12 @@ FULL_SPEED = 1.0
 SLOW_SPEED = 0.2
 INDEX = 0
 STATUS = 0
+RATE = None
 
 def pps_callback(msg):
-	global STATUS
-	global INDEX
-	global REPETITION
-	global FULL_SPEED
-	global SLOW_SPEED
-	global N
-	
+	global STATUS	
 	STATUS = msg.data
-	rate = rospy.Rate(10)
-	rate.sleep()
+	RATE.sleep()
 
 if __name__ == "__main__":									
 	joints = list()
@@ -38,13 +32,12 @@ if __name__ == "__main__":
 		joints.extend(template)
 
 	rospy.init_node("move")
+	RATE = rospy.Rate(10)
 	crc = CapekRobotCommander("r1")
 	crc.move_l_position()
 
 	pps_subscriber = rospy.Subscriber("pps_status", Int8, pps_callback)
-	
-	rate = rospy.Rate(10)
-	
+		
 	while not rospy.is_shutdown():
 		for index, coordinate in enumerate(joints[INDEX:]):
 			if not STATUS == 2:
@@ -58,9 +51,8 @@ if __name__ == "__main__":
 				crc.group.execute(joint_plan, wait=False)			
 				while True:
 					c1 = sum(crc.group.get_current_joint_values())
-					rate.sleep()
+					RATE.sleep()
 					c2 = sum(crc.group.get_current_joint_values())
 					if round(c1, 6) == round(c2, 6):
 						INDEX = index % 6
 						break
-
