@@ -23,6 +23,7 @@ RATE = None
 
 def pps_callback(msg):
 	global STATUS	
+	crc.group.stop()
 	STATUS = msg.data
 	RATE.sleep()
 
