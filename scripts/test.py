@@ -9,7 +9,8 @@ from math import radians
 REACHED_DESTINATION = False
 CURRENT_JOINT_VALUES = None
 STATUS = 0
-N = 10
+N = 5
+REPETITION = 0
 TRAJECTORY = list()
 
 template = [
@@ -26,7 +27,7 @@ for _ in range(N):
 
 def move_joint_space(a1, a2, a3, a4, a5, a6, a7):
     pub = rospy.Publisher("/r1/command/JointPosition", JointPosition, queue_size=10)
-    rate = rospy.Rate(100)
+    rate = rospy.Rate(50)
     message = JointPosition()
     message.position.a1 = a1
     message.position.a2 = a2
@@ -47,7 +48,6 @@ def move_l_position():
 def reached_destination(msg):
     global REACHED_DESTINATION
     REACHED_DESTINATION = True
-    rospy.loginfo(msg)
 
 def set_path_parameters(robot_speed):
     # It only works in different possition than it is when calling script
@@ -57,9 +57,8 @@ def set_path_parameters(robot_speed):
         # FIXME We set both parameters 0.1, a velocity exeption occurs 
         joint_relative_velocity = robot_speed
         joint_relative_acceleration = 0.1
-        print(client(joint_relative_velocity=joint_relative_velocity,
-               joint_relative_acceleration=joint_relative_acceleration))
-        print('Path parameter set.')
+        client(joint_relative_velocity=joint_relative_velocity,
+               joint_relative_acceleration=joint_relative_acceleration)
 
 def get_current_joint_values(msg):
     global CURRENT_JOINT_VALUES
@@ -68,23 +67,7 @@ def get_current_joint_values(msg):
 def pps_callback(msg):
     global STATUS
     STATUS = msg.data
-
-    if STATUS == 1:
-        set_path_parameters(robot_speed=0.2)
-
-    if STATUS == 2:
-        move_joint_space(
-            CURRENT_JOINT_VALUES.a1,
-            CURRENT_JOINT_VALUES.a2,
-            CURRENT_JOINT_VALUES.a3,
-            CURRENT_JOINT_VALUES.a4,
-            CURRENT_JOINT_VALUES.a5,
-            CURRENT_JOINT_VALUES.a6,
-            CURRENT_JOINT_VALUES.a7,
-        )
-
-    if STATUS == 3:
-        set_path_parameters(robot_speed=1.0)
+    rate.sleep()
 
 if __name__ == '__main__':
     rospy.init_node("move_robot", anonymous=True)
@@ -97,11 +80,11 @@ if __name__ == '__main__':
         move_l_position()
     
     set_path_parameters(robot_speed=1.0)
-
+    rate = rospy.Rate(100)
     for index, position in enumerate(TRAJECTORY):
         REACHED_DESTINATION = False
-        while not rospy.is_shutdown() and not REACHED_DESTINATION:
-            if not STATUS == 2:
+        while (not rospy.is_shutdown()) and (not REACHED_DESTINATION):
+            if (STATUS != 2):
                 move_joint_space(
                     position[0], 
                     position[1], 
@@ -111,3 +94,34 @@ if __name__ == '__main__':
                     position[5],
                     position[6]
                 )
+            if STATUS == 1:
+                move_joint_space(
+                    CURRENT_JOINT_VALUES.a1,
+                    CURRENT_JOINT_VALUES.a2,
+                    CURRENT_JOINT_VALUES.a3,
+                    CURRENT_JOINT_VALUES.a4,
+                    CURRENT_JOINT_VALUES.a5,
+                    CURRENT_JOINT_VALUES.a6,
+                    CURRENT_JOINT_VALUES.a7,
+                )
+                REACHED_DESTINATION = False
+                while not REACHED_DESTINATION:
+                    rate.sleep()
+                set_path_parameters(robot_speed=0.2)
+                STATUS = 0
+            
+            if STATUS == 3:
+                move_joint_space(
+                    CURRENT_JOINT_VALUES.a1,
+                    CURRENT_JOINT_VALUES.a2,
+                    CURRENT_JOINT_VALUES.a3,
+                    CURRENT_JOINT_VALUES.a4,
+                    CURRENT_JOINT_VALUES.a5,
+                    CURRENT_JOINT_VALUES.a6,
+                    CURRENT_JOINT_VALUES.a7,
+                )
+                REACHED_DESTINATION = False
+                while not REACHED_DESTINATION:
+                    rate.sleep()
+                set_path_parameters(robot_speed=1.0)
+                STATUS = 0
