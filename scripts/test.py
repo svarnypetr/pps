@@ -26,7 +26,7 @@ for _ in range(N):
 
 def move_joint_space(a1, a2, a3, a4, a5, a6, a7):
     pub = rospy.Publisher("/r1/command/JointPosition", JointPosition, queue_size=10)
-    rate = rospy.Rate(10)
+    rate = rospy.Rate(100)
     message = JointPosition()
     message.position.a1 = a1
     message.position.a2 = a2
@@ -49,13 +49,13 @@ def reached_destination(msg):
     REACHED_DESTINATION = True
     rospy.loginfo(msg)
 
-def set_path_parameters():
+def set_path_parameters(robot_speed):
     # It only works in different possition than it is when calling script
         client = rospy.ServiceProxy(
             "/r1/configuration/pathParameters",
             SetPathParameters)
         # FIXME We set both parameters 0.1, a velocity exeption occurs 
-        joint_relative_velocity = 0.2
+        joint_relative_velocity = robot_speed
         joint_relative_acceleration = 0.1
         print(client(joint_relative_velocity=joint_relative_velocity,
                joint_relative_acceleration=joint_relative_acceleration))
@@ -64,26 +64,39 @@ def set_path_parameters():
 def get_current_joint_values(msg):
     global CURRENT_JOINT_VALUES
     CURRENT_JOINT_VALUES = msg.position
-    rospy.loginfo("Current joint values {}".format(CURRENT_JOINT_VALUES))
 
 def pps_callback(msg):
     global STATUS
     STATUS = msg.data
 
     if STATUS == 1:
-        set_path_parameters()
+        set_path_parameters(robot_speed=0.2)
+
+    if STATUS == 2:
+        move_joint_space(
+            CURRENT_JOINT_VALUES.a1,
+            CURRENT_JOINT_VALUES.a2,
+            CURRENT_JOINT_VALUES.a3,
+            CURRENT_JOINT_VALUES.a4,
+            CURRENT_JOINT_VALUES.a5,
+            CURRENT_JOINT_VALUES.a6,
+            CURRENT_JOINT_VALUES.a7,
+        )
+
+    if STATUS == 3:
+        set_path_parameters(robot_speed=1.0)
 
 if __name__ == '__main__':
     rospy.init_node("move_robot", anonymous=True)
     rospy.Subscriber("/r1/state/DestinationReached", Time, reached_destination)
-    rospy.Subscriber("/iiwa/state/JointPosition", JointPosition, get_current_joint_values)
+    rospy.Subscriber("/r1/state/JointPosition", JointPosition, get_current_joint_values)
     pps_subscriber = rospy.Subscriber("pps_status", Int8, pps_callback)
 
     REACHED_DESTINATION = False
     while not rospy.is_shutdown() and not REACHED_DESTINATION:
         move_l_position()
     
-    set_path_parameters()
+    set_path_parameters(robot_speed=1.0)
 
     for index, position in enumerate(TRAJECTORY):
         REACHED_DESTINATION = False
