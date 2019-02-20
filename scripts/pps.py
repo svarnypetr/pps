@@ -47,9 +47,9 @@ class PeriPersonalSpaceChecker(object):
         max_status = max(pair_states)
         max_pairs = [x[0] for x in zip(self.pairs, pair_states) if x[1] == max_status]
         verbose = {0: 'OK',
-                   1: 'WARNING',
+                   1: 'SlOW',
                    2: 'STOP',
-                   4: 'SLOW',
+                   8: 'WARNING',
                    }
         pps_message_output = {'status': max_status,
                               'pairs': max_pairs,
@@ -72,15 +72,15 @@ class PeriPersonalSpaceChecker(object):
                     pair_states.append(2)
                 elif 0 < np.linalg.norm(transform) < slow_threshold:
                     # SLOW
-                    pair_states.append(4)
+                    pair_states.append(1)
                 else:
                     # ALL OK
                     pair_states.append(0)
 
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                pair_states.append(1)
-            except IndexError:
-                import ipdb; ipdb.set_trace()
+                pair_states.append(8)
+            # except IndexError:
+            #     import ipdb; ipdb.set_trace()
 
         # print('\n'.join([str(x) for x in zip(self.pairs, pair_states)]))  # WIP
 
@@ -155,20 +155,20 @@ if __name__ == "__main__":
                      },
                 ]
 
-    config = scenarios[4]
+    config = scenarios[3]
     '''
     Experiment scenarios 
     0 - distance only from base, stopping
-    1 - distance only from base, slowing down 
+    1 - distance only from base slowing down 
     2 - all keypoints taken into account, only stopping
     3 - all keypoints taken into account, slowing down
     4 - all keypoints taken into account, stopping only on head
     '''
 
     pps = PeriPersonalSpaceChecker(config)
-    coeffgen = CoefficientGenerator(pps.listener, config['keypoints'][0])
+    coeffgen = CoefficientGenerator(pps.listener, config['keypoints'][0]) #DO NOT CHANGE
 
-    rate = rospy.Rate(10.0)
+    rate = rospy.Rate(50.0)
     f = open('py_data.csv', 'a')
     while not rospy.is_shutdown():
 
