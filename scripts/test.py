@@ -7,20 +7,21 @@ from std_msgs.msg import Time, Int8
 from math import radians
 from scipy.interpolate import interp1d
 import numpy as np
+import time
 
 REACHED_DESTINATION = False
 CURRENT_JOINT_VALUES = None
 STATUS = 0
-N = 100
+N = 20
 REPETITION = 0
 TRAJECTORY = list()
 
 template = [
 	[-radians(30), 0.0, 0.0, -radians(90), 0.0, radians(90), 0.0],
-	[-radians(30), radians(55), 0.0, -radians(90+20), 0.0, radians(15), 0.0],
+	[-radians(30), radians(45), 0.0, -radians(90+10), 0.0, radians(35), 0.0],
 	[-radians(30), 0.0, 0.0, -radians(90), 0.0, radians(90), 0.0],
 	[+radians(30), 0.0, 0.0, -radians(90), 0.0, radians(90), 0.0],
-	[+radians(30), radians(55), 0.0, -radians(90+20), 0.0, radians(15), 0.0],
+	[+radians(30), radians(45), 0.0, -radians(90+10), 0.0, radians(35), 0.0],
 	[+radians(30), 0.0, 0.0, -radians(90), 0.0, radians(90), 0.0],
 ]
 
@@ -116,10 +117,11 @@ if __name__ == '__main__':
 
     rate = rospy.Rate(100)
 
+    COUNTER = 0
     index = 0
-    while index < len(TRAJECTORY):
 
-        rospy.loginfo("Index: {}".format(index))
+    start_time = time.time()
+    while index < len(TRAJECTORY):
 
         # STOP PROCEDURE
         if STATUS == 2:
@@ -164,7 +166,7 @@ if __name__ == '__main__':
                 rate.sleep()
             index -= 1
         else:            
-            if STATUS == 1 or STATUS == 3:
+            if STATUS == 1 or STATUS == 0:
                 if STATUS == 1:
                     if SPEED == "full":
                         # STOP first
@@ -213,7 +215,7 @@ if __name__ == '__main__':
                             pass
                     set_path_parameters(robot_speed=0.2)
                     SPEED = "slow"
-                elif STATUS == 3:
+                elif STATUS == 0:
                     set_path_parameters(robot_speed=1.0)
                     SPEED = "full"
 
@@ -230,5 +232,12 @@ if __name__ == '__main__':
                 while (not rospy.is_shutdown()) and (not REACHED_DESTINATION) and (not STATUS == 2):
                     rate.sleep()
                 index += 1
+
+                if (index % 6 == 0):
+                    COUNTER += 1
+                    rospy.loginfo("Number of mintage: {}".format(COUNTER))
             else:
                 rospy.loginfo("Use STATUS 1, 2 or 3")
+    
+    end_time = time.time()
+    print("Whole experiment took {} sec".format(end_time-start_time))
