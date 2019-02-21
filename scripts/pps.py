@@ -171,7 +171,7 @@ if __name__ == "__main__":
     pps = PeriPersonalSpaceChecker(config)
     # coeffgen = CoefficientGenerator(pps.listener, config['keypoints'][0]) #DO NOT CHANGE
 
-    rate = rospy.Rate(100.0)
+    RATE = rospy.Rate(10.0)
     f = open('py_data.csv', 'a')
     while not rospy.is_shutdown():
 
@@ -185,7 +185,7 @@ if __name__ == "__main__":
         # except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
         #     print('none')
 
-        rate.sleep()
+        RATE.sleep()
 
     f.close()
     rospy.spin()
