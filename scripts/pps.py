@@ -23,7 +23,7 @@ class PeriPersonalSpaceChecker(object):
         self.keypoints = config['keypoints']
         self.pairs = self.make_combinations(self.keypoints)
         self.listener = tf.TransformListener()
-        self.publisher = rospy.Publisher(topic_alert, String, queue_size=10)
+        # self.publisher = rospy.Publisher(topic_alert, String, queue_size=10)
         self.publisher_status = rospy.Publisher(topic_status, Int8, queue_size=10)
         self.pps_status = ''
 
@@ -86,8 +86,8 @@ class PeriPersonalSpaceChecker(object):
         if self.pps_status != new_status:
             self.publisher_status.publish(new_status)
             self.pps_status = new_status
-        pps_message = self.construct_pps_message(pair_states)
-        self.publisher.publish(str(pps_message))
+        # pps_message = self.construct_pps_message(pair_states)
+        # self.publisher.publish(str(pps_message))
 
 
 def generate_uni_thresholds(keypoints, thr):
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     pps = PeriPersonalSpaceChecker(config)
     coeffgen = CoefficientGenerator(pps.listener, config['keypoints'][0]) #DO NOT CHANGE
 
-    rate = rospy.Rate(50.0)
+    rate = rospy.Rate(100.0)
     f = open('py_data.csv', 'a')
     while not rospy.is_shutdown():
 

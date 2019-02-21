@@ -9,7 +9,8 @@ import pyrealsense2 as rs
 import rospy
 import tf
 from tf.transformations import quaternion_from_euler
-from std_msgs.msg import Int8
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
 
 from camera_setup import camera_setup
 
@@ -36,9 +37,10 @@ depth_scale = depth_sensor.get_depth_scale()
 
 rospy.init_node('keypoint_tf_broadcaster')
 br = tf.TransformBroadcaster()
-rate = rospy.Rate(50.0)
+rate = rospy.Rate(100.0)
 listener = tf.TransformListener()
-publisher = rospy.Publisher("pps_status", Int8, queue_size=1000)
+image_pub = rospy.Publisher("realsense_image", Image, queue_size=10)
+bridge = CvBridge()
 
 # OpenPose Keypoint indexes
 head = [0, 1, 14, 15, 16, 17]
@@ -83,38 +85,35 @@ try:
 
         if keypoints.any() and depth_image.any():
             interest_kpts = keypoints[0][interesting, :]
-            # print(interest_kpts) # [0]
 
             distances_to_camera = get_distances(interest_kpts, depth_image, depth_scale)
 
             int_coords = get_int_coords(interest_kpts)
             distances = get_distances(interest_kpts, depth_image, depth_scale)
             point_lst = [rs.rs2_deproject_pixel_to_point(depth_intrin, x, y) for x, y in zip(int_coords, distances)]
-            #
-            # if interest_kpts.all() and not body_constraints:
-            #     print('interest and not body')
-            # if body_constraints:
-            #     print('body')
 
-            # print("distance to camera for mid: {}".format(depth_image[424, 240] * depth_scale))
             for idx, pt in enumerate(point_lst):
                 br.sendTransform(tuple(pt),
                                  quaternion_from_euler(0, 0, 0),
                                  rospy.Time.now(),
                                  kpt_names[idx],
                                  'camera_link')
+        try:
+            image_pub.publish(bridge.cv2_to_imgmsg(output_image, encoding="passthrough"))
+        except CvBridgeError as e:
+            print(e)
 
-        if show:
-            # cv2.circle(depth_colormap, tuple(int_coords[0]), 5, (0, 0, 255), -1) #  WIP: Debug code for eval point
-            images = np.hstack((output_image, depth_colormap))
-            cv2.namedWindow('Align Example', cv2.WINDOW_AUTOSIZE)
-            cv2.imshow('Align Example', images)
-
-            key = cv2.waitKey(1)
-            # Press esc or 'q' to close the image window
-            if key & 0xFF == ord('q') or key == 27:
-                cv2.destroyAllWindows()
-                break
+        # if show:
+        #     # cv2.circle(depth_colormap, tuple(int_coords[0]), 5, (0, 0, 255), -1) #  WIP: Debug code for eval point
+        #     images = np.hstack((output_image, depth_colormap))
+        #     cv2.namedWindow('Align Example', cv2.WINDOW_AUTOSIZE)
+        #     cv2.imshow('Align Example', images)
+        #
+        #     key = cv2.waitKey(1)
+        #     # Press esc or 'q' to close the image window
+        #     if key & 0xFF == ord('q') or key == 27:
+        #         cv2.destroyAllWindows()
+        #         break
 
 finally:
     pipeline.stop()
