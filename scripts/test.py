@@ -67,6 +67,9 @@ def get_current_joint_values(msg):
 def pps_callback(msg):
     global STATUS
     STATUS = msg.data
+    if STATUS == 2:
+        rospy.loginfo("Stopping the robot, STATUS 2")
+        REACHED_DESTINATION = True
     rate.sleep()
 
 if __name__ == '__main__':
@@ -82,44 +85,75 @@ if __name__ == '__main__':
     set_path_parameters(robot_speed=1.0)
     rate = rospy.Rate(100)
     for index, position in enumerate(TRAJECTORY):
-        REACHED_DESTINATION = False
-        while (not rospy.is_shutdown()) and (not REACHED_DESTINATION):
-            if (STATUS != 2):
-                move_joint_space(
-                    position[0], 
-                    position[1], 
-                    position[2], 
-                    position[3], 
-                    position[4],
-                    position[5],
-                    position[6]
-                )
-            if STATUS == 1:
-                move_joint_space(
-                    CURRENT_JOINT_VALUES.a1,
-                    CURRENT_JOINT_VALUES.a2,
-                    CURRENT_JOINT_VALUES.a3,
-                    CURRENT_JOINT_VALUES.a4,
-                    CURRENT_JOINT_VALUES.a5,
-                    CURRENT_JOINT_VALUES.a6,
-                    CURRENT_JOINT_VALUES.a7,
-                )
-                REACHED_DESTINATION = False
-                while not REACHED_DESTINATION:
-                    rate.sleep()
-                set_path_parameters(robot_speed=0.2)
-            
-            if STATUS == 3:
-                move_joint_space(
-                    CURRENT_JOINT_VALUES.a1,
-                    CURRENT_JOINT_VALUES.a2,
-                    CURRENT_JOINT_VALUES.a3,
-                    CURRENT_JOINT_VALUES.a4,
-                    CURRENT_JOINT_VALUES.a5,
-                    CURRENT_JOINT_VALUES.a6,
-                    CURRENT_JOINT_VALUES.a7,
-                )
-                REACHED_DESTINATION = False
-                while not REACHED_DESTINATION:
-                    rate.sleep()
-                set_path_parameters(robot_speed=1.0)
+
+        # MOVEMENT PROCEDURE WHICH REACTS ON STATUS 1 AND 2
+        if not STATUS == 2:
+            REACHED_DESTINATION = False
+            move_joint_space(
+                position[0], 
+                position[1], 
+                position[2], 
+                position[3], 
+                position[4],
+                position[5],
+                position[6]
+            )
+
+        while (not rospy.is_shutdown()) and (not REACHED_DESTINATION) and (not STATUS == 2):
+            rate.sleep()
+
+        # STOP PROCEDURE
+        if STATUS == 2:
+            REACHED_DESTINATION = False
+            move_joint_space(
+                CURRENT_JOINT_VALUES.a1,
+                CURRENT_JOINT_VALUES.a2,
+                CURRENT_JOINT_VALUES.a3,
+                CURRENT_JOINT_VALUES.a4,
+                CURRENT_JOINT_VALUES.a5,
+                CURRENT_JOINT_VALUES.a6,
+                CURRENT_JOINT_VALUES.a7,
+            )
+
+        while (not rospy.is_shutdown()) and (not REACHED_DESTINATION) and (STATUS == 2):
+            rate.sleep()
+        
+        # SLOW SPEED PROCEDURE
+        if STATUS == 1:
+            REACHED_DESTINATION = False
+            move_joint_space(
+                CURRENT_JOINT_VALUES.a1,
+                CURRENT_JOINT_VALUES.a2,
+                CURRENT_JOINT_VALUES.a3,
+                CURRENT_JOINT_VALUES.a4,
+                CURRENT_JOINT_VALUES.a5,
+                CURRENT_JOINT_VALUES.a6,
+                CURRENT_JOINT_VALUES.a7,
+            )
+
+        while (not rospy.is_shutdown()) and (not REACHED_DESTINATION) and (STATUS == 1):
+            rate.sleep()
+
+        if STATUS == 1:
+            set_path_parameters(robot_speed=0.2)
+            STATUS = 0
+
+        # FULL SPEED PROCEDURE
+        if STATUS == 3:
+            REACHED_DESTINATION = False
+            move_joint_space(
+                CURRENT_JOINT_VALUES.a1,
+                CURRENT_JOINT_VALUES.a2,
+                CURRENT_JOINT_VALUES.a3,
+                CURRENT_JOINT_VALUES.a4,
+                CURRENT_JOINT_VALUES.a5,
+                CURRENT_JOINT_VALUES.a6,
+                CURRENT_JOINT_VALUES.a7,
+            )
+
+        while (not rospy.is_shutdown()) and (not REACHED_DESTINATION) and (STATUS == 3):
+            rate.sleep()
+
+        if STATUS == 3:
+            set_path_parameters(robot_speed=1.0)
+            STATUS = 0
