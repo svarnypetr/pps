@@ -128,7 +128,7 @@ if __name__ == '__main__':
                 CURRENT_JOINT_VALUES.a7
             ]
 
-            next_stop = find_closest(current_state, INTERPOLATED_TEMPLATE, offset=0)
+            next_stop = find_closest(current_state, INTERPOLATED_TEMPLATE, offset=4)
             if next_stop.any():
                 rospy.loginfo("Current state: {}".format(current_state))
                 rospy.loginfo("Next state   : {}".format(next_stop))
