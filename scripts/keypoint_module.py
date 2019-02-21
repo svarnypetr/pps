@@ -28,7 +28,8 @@ def get_int_coords(keypoints):
     return [x[:2].astype(int).tolist() for x in keypoints]
 
 
-show = True
+SHOW = False
+PUBLISH = False
 align, depth_scale, openpose, pc, points, pipeline, profile = camera_setup()
 
 # Depth scale - units of the values inside a depth frame, i.e how to convert the value to units of 1 meter
@@ -39,8 +40,8 @@ rospy.init_node('keypoint_tf_broadcaster')
 br = tf.TransformBroadcaster()
 rate = rospy.Rate(100.0)
 listener = tf.TransformListener()
-image_pub = rospy.Publisher("realsense_image", Image, queue_size=10)
-bridge = CvBridge()
+# image_pub = rospy.Publisher("realsense_image", Image, queue_size=10)
+# bridge = CvBridge()
 
 # OpenPose Keypoint indexes
 head = [0, 1, 14, 15, 16, 17]
@@ -85,6 +86,7 @@ try:
 
         if keypoints.any() and depth_image.any():
             interest_kpts = keypoints[0][interesting, :]
+            # print(interest_kpts)
 
             distances_to_camera = get_distances(interest_kpts, depth_image, depth_scale)
 
@@ -98,22 +100,22 @@ try:
                                  rospy.Time.now(),
                                  kpt_names[idx],
                                  'camera_link')
-        try:
-            image_pub.publish(bridge.cv2_to_imgmsg(output_image, encoding="passthrough"))
-        except CvBridgeError as e:
-            print(e)
 
-        # if show:
-        #     # cv2.circle(depth_colormap, tuple(int_coords[0]), 5, (0, 0, 255), -1) #  WIP: Debug code for eval point
-        #     images = np.hstack((output_image, depth_colormap))
-        #     cv2.namedWindow('Align Example', cv2.WINDOW_AUTOSIZE)
-        #     cv2.imshow('Align Example', images)
-        #
-        #     key = cv2.waitKey(1)
-        #     # Press esc or 'q' to close the image window
-        #     if key & 0xFF == ord('q') or key == 27:
-        #         cv2.destroyAllWindows()
-        #         break
+        # try:
+        #     image_pub.publish(bridge.cv2_to_imgmsg(output_image, encoding="passthrough"))
+        # except CvBridgeError as e:
+        #     print(e)
+
+        # cv2.circle(depth_colormap, tuple(int_coords[0]), 5, (0, 0, 255), -1) #  WIP: Debug code for eval point
+        images = np.hstack((output_image, depth_colormap))
+        cv2.namedWindow('Align Example', cv2.WINDOW_AUTOSIZE)
+        cv2.imshow('Align Example', images)
+
+        key = cv2.waitKey(1)
+        # Press esc or 'q' to close the image window
+        if key & 0xFF == ord('q') or key == 27:
+            cv2.destroyAllWindows()
+            break
 
 finally:
     pipeline.stop()
