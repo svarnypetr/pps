@@ -1,4 +1,10 @@
 #!/usr/bin/python
+"""
+STATUS 1 - All good, moving with full speed
+STATUS 2 - Be caferful, human is near by, moving with 20% speed
+STATUS 3 - Warning, possible collision with human, stop robot
+"""
+
 import rospy
 import math
 from iiwa_msgs.msg import JointPosition
@@ -124,7 +130,7 @@ if __name__ == '__main__':
     while index < len(TRAJECTORY):
 
         # STOP PROCEDURE
-        if STATUS == 2:
+        if STATUS == 3:
             current_state = [
                 CURRENT_JOINT_VALUES.a1,
                 CURRENT_JOINT_VALUES.a2,
@@ -162,12 +168,12 @@ if __name__ == '__main__':
             else:
                 rospy.loginfo("Next stop index is out of reach")
             
-            while STATUS == 2:
+            while STATUS == 3:
                 rate.sleep()
             index -= 1
         else:            
-            if STATUS == 1 or STATUS == 0:
-                if STATUS == 1:
+            if STATUS == 1 or STATUS == 2:
+                if STATUS == 2:
                     if SPEED == "full":
                         # STOP first
                         current_state = [
@@ -215,7 +221,7 @@ if __name__ == '__main__':
                             pass
                     set_path_parameters(robot_speed=0.2)
                     SPEED = "slow"
-                elif STATUS == 0:
+                elif STATUS == 1:
                     set_path_parameters(robot_speed=1.0)
                     SPEED = "full"
 
@@ -229,7 +235,7 @@ if __name__ == '__main__':
                     TRAJECTORY[index][5],
                     TRAJECTORY[index][6]
                 )
-                while (not rospy.is_shutdown()) and (not REACHED_DESTINATION) and (not STATUS == 2):
+                while (not rospy.is_shutdown()) and (not REACHED_DESTINATION) and (not STATUS == 3):
                     rate.sleep()
                 index += 1
 
