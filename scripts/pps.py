@@ -21,7 +21,7 @@ class PeriPersonalSpaceChecker(object):
                  topic_status='pps_status',
                  ):
         self.keypoints = config['keypoints']
-        self.pairs = []
+        self.pairs = self.make_combinations(self.keypoints)
         self.listener = tf.TransformListener()
         self.publisher = rospy.Publisher(topic_alert, String, queue_size=10)
         self.publisher_status = rospy.Publisher(topic_status, Int8, queue_size=10)
@@ -58,14 +58,14 @@ class PeriPersonalSpaceChecker(object):
         return pps_message_output
 
     def check_pps(self):
-        self.pairs = self.make_combinations(self.keypoints)
 
         pair_states = []
         for pair in self.pairs:
+            print(pair)
             try:
                 (transform, rotation) = self.listener.lookupTransform(pair[0], pair[1], rospy.Time(0))
-                stop_threshold = min(self.stop_threshold[pair[0]], self.stop_threshold[pair[0]])
-                slow_threshold = min(self.slow_threshold[pair[0]], self.slow_threshold[pair[1]])
+                stop_threshold = max(self.stop_threshold[pair[0]], self.stop_threshold[pair[0]])
+                slow_threshold = max(self.slow_threshold[pair[0]], self.slow_threshold[pair[1]])
 
                 if 0 < np.linalg.norm(transform) < stop_threshold:
                     # STOP
@@ -82,11 +82,8 @@ class PeriPersonalSpaceChecker(object):
             # except IndexError:
             #     import ipdb; ipdb.set_trace()
 
-        # print('\n'.join([str(x) for x in zip(self.pairs, pair_states)]))  # WIP
-
         new_status = max(pair_states)
         if self.pps_status != new_status:
-            # print('new: {} old: {}'.format(new_status, self.pps_status))  # WIP
             self.publisher_status.publish(new_status)
             self.pps_status = new_status
         pps_message = self.construct_pps_message(pair_states)
@@ -112,11 +109,16 @@ if __name__ == "__main__":
 
     all_human_keypoints = ['/'+str(x) for x in range(8)] + ['/14', '/15', '/16', '/17']
     robot_base = ['/r1_link_0']
-    moving_robot = ['/r1_link_'+str(x) for x in range(2, 8)] + ['/r1_ee']
+    moving_robot = ['/r1_link_'+str(x) for x in range(3, 8)] + ['/r1_ee']
     human_hands = ['/4', '/7']
+
+    various_thr = generate_uni_thresholds(all_human_keypoints + moving_robot, 0.2)
+    various_thr.update({'/r1_ee': 0.6, '/r1_link_8': 0.6, '/r1_link_7': 0.6, '/r1_link_6': 0.6,
+                        '/r1_link_5': 0.6, '/r1_link_0': 0.6, '/r1_link_0': 0.6})
 
     head_thr = generate_uni_thresholds(all_human_keypoints + moving_robot, 0)
     head_thr.update({'/0': 0.6, '/1': 0.6, '/14': 0.6, '/15': 0.6, '/16': 0.6, '/17': 0.6})
+    print('head thr {}'.format(head_thr))  # WIP
 
     scenarios = [
                     {'keypoints': [robot_base, all_human_keypoints],

@@ -86,6 +86,8 @@ def camera_setup():
     params["download_heatmaps"] = False
     params["heatmaps_add_parts"] = True
     params["heatmaps_add_PAFs"] = True
+    params["tracking"] = 5
+    params["number_people_max"] = 1
     # Ensure you point to the correct path where models are located
     params["default_model_folder"] = "/home/naoskin/openposeKuka/openpose/models/"
     params["display"] = 0
