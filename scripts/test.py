@@ -29,7 +29,7 @@ for _ in range(N):
 
 def move_joint_space(a1, a2, a3, a4, a5, a6, a7):
     pub = rospy.Publisher("/r1/command/JointPosition", JointPosition, queue_size=10)
-    rate = rospy.Rate(50)
+    rate = rospy.Rate(100)
     message = JointPosition()
     message.position.a1 = a1
     message.position.a2 = a2
@@ -64,13 +64,14 @@ def set_path_parameters(robot_speed):
 
 def get_current_joint_values(msg):
     global CURRENT_JOINT_VALUES
+    rate = rospy.Rate(100)
     CURRENT_JOINT_VALUES = msg.position
+    rate.sleep()
 
 def pps_callback(msg):
     global STATUS
+    rate = rospy.Rate(100)
     STATUS = msg.data
-    if STATUS == 2:
-        REACHED_DESTINATION = True
     rate.sleep()
 
 def interpolate(array, n_points):
@@ -126,24 +127,31 @@ if __name__ == '__main__':
                 CURRENT_JOINT_VALUES.a6,
                 CURRENT_JOINT_VALUES.a7
             ]
+
             next_stop = find_closest(current_state, INTERPOLATED_TEMPLATE, offset=0)
-            rospy.loginfo(next_stop)
-            REACHED_DESTINATION = False
-            move_joint_space(
-                next_stop[0],
-                next_stop[1],
-                next_stop[2],
-                next_stop[3],
-                next_stop[4],
-                next_stop[5],
-                next_stop[6],
-            )
-            rospy.loginfo(CURRENT_JOINT_VALUES)
-            while (not rospy.is_shutdown()) and (not REACHED_DESTINATION):
-                rate.sleep()
+            if next_stop.any():
+                rospy.loginfo("Current state: {}".format(current_state))
+                rospy.loginfo("Next state   : {}".format(next_stop))
+
+                REACHED_DESTINATION = False
+                move_joint_space(
+                    next_stop[0],
+                    next_stop[1],
+                    next_stop[2],
+                    next_stop[3],
+                    next_stop[4],
+                    next_stop[5],
+                    next_stop[6],
+                )
+                """ move_joint_space(
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+                ) """
+            else:
+                rospy.loginfo("Next stop index is out of reach")
             
             while STATUS == 2:
                 rate.sleep()
+            index -= 1
         else:            
             if STATUS == 1 or STATUS == 3:
                 if STATUS == 1:
@@ -160,7 +168,7 @@ if __name__ == '__main__':
                     TRAJECTORY[index][5],
                     TRAJECTORY[index][6]
                 )
-                while (not rospy.is_shutdown()) and (not REACHED_DESTINATION):
+                while (not rospy.is_shutdown()) and (not REACHED_DESTINATION) and (not STATUS == 2):
                     rate.sleep()
                 index += 1
             else:
