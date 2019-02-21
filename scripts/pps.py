@@ -70,13 +70,13 @@ class PeriPersonalSpaceChecker(object):
                 pair_distances.append(distance)
                 if 0 < distance < stop_threshold:
                     # STOP
-                    pair_states.append(2)
+                    pair_states.append(3)
                 elif 0 < distance < slow_threshold:
                     # SLOW
-                    pair_states.append(1)
+                    pair_states.append(2)
                 else:
                     # ALL OK
-                    pair_states.append(0)
+                    pair_states.append(1)
 
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 pair_states.append(8)
