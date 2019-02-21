@@ -5,6 +5,8 @@ from iiwa_msgs.msg import JointPosition
 from iiwa_msgs.srv import SetPathParameters
 from std_msgs.msg import Time, Int8
 from math import radians
+from scipy.interpolate import interp1d
+import numpy as np
 
 REACHED_DESTINATION = False
 CURRENT_JOINT_VALUES = None
@@ -71,11 +73,35 @@ def pps_callback(msg):
         REACHED_DESTINATION = True
     rate.sleep()
 
+def interpolate(array, n_points):
+    indexes = np.arange(1, n_points+1)
+    interpolated = list()
+    for i in range(len(template)-1):
+        linfit = interp1d([1, n_points], np.vstack([array[i], array[i+1]]), axis=0)
+        interpolated.extend(linfit(indexes))
+    return interpolated
+
+def find_closest(current_state, array, offset=0):   
+    distances = list()
+    for interpolation in array:
+        dist = np.linalg.norm(current_state-interpolation)
+        distances.append(dist)
+
+    closest_point = distances.index(min(distances))
+    if closest_point+offset < len(array):
+        return array[closest_point+offset]
+    elif offset == 0:
+        return array[closest_point]
+    else:
+        return None
+
 if __name__ == '__main__':
     rospy.init_node("move_robot", anonymous=True)
     rospy.Subscriber("/r1/state/DestinationReached", Time, reached_destination)
     rospy.Subscriber("/r1/state/JointPosition", JointPosition, get_current_joint_values)
     pps_subscriber = rospy.Subscriber("pps_status", Int8, pps_callback)
+
+    INTERPOLATED_TEMPLATE = interpolate(template, 10)
 
     REACHED_DESTINATION = False
     while not rospy.is_shutdown() and not REACHED_DESTINATION:
@@ -91,17 +117,28 @@ if __name__ == '__main__':
 
         # STOP PROCEDURE
         if STATUS == 2:
-            rospy.loginfo("Stopping robot")
-            """ REACHED_DESTINATION = False
-            move_joint_space(
+            current_state = [
                 CURRENT_JOINT_VALUES.a1,
                 CURRENT_JOINT_VALUES.a2,
                 CURRENT_JOINT_VALUES.a3,
                 CURRENT_JOINT_VALUES.a4,
                 CURRENT_JOINT_VALUES.a5,
                 CURRENT_JOINT_VALUES.a6,
-                CURRENT_JOINT_VALUES.a7,
-            ) """
+                CURRENT_JOINT_VALUES.a7
+            ]
+            next_stop = find_closest(current_state, INTERPOLATED_TEMPLATE, offset=0)
+            rospy.loginfo(next_stop)
+            REACHED_DESTINATION = False
+            move_joint_space(
+                next_stop[0],
+                next_stop[1],
+                next_stop[2],
+                next_stop[3],
+                next_stop[4],
+                next_stop[5],
+                next_stop[6],
+            )
+            rospy.loginfo(CURRENT_JOINT_VALUES)
             while (not rospy.is_shutdown()) and (not REACHED_DESTINATION):
                 rate.sleep()
             
