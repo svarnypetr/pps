@@ -58,7 +58,7 @@ def setup_advanced_camera():
         pass
 
 
-def camera_setup(show):
+def camera_setup():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     # Append to syspath the path to openpose python build
     sys.path.append('/home/naoskin/openposeKuka/openpose/build/python')
@@ -71,25 +71,26 @@ def camera_setup(show):
     # Parameters for OpenPose.
     # Take a look at C++ OpenPose example for meaning of components.
     params = dict()
-    params["logging_level"] = 3
+    params["logging_level"] = 4
     params["output_resolution"] = "-1x-1"
-    params["net_resolution"] = "-1x368"
+    params["net_resolution"] = "-1x480"
     params["model_pose"] = "COCO"
     params["alpha_pose"] = 0.6
     params["scale_gap"] = 0.3
     params["scale_number"] = 1
     params["render_threshold"] = 0.05
+    params["render_pose"] = True
     params["num_gpu_start"] = 0
     params["disable_blending"] = False
-    params["render_pose"] = True
     params["number_people_max"] = 1
     params["download_heatmaps"] = False
     params["heatmaps_add_parts"] = True
     params["heatmaps_add_PAFs"] = True
+    params["tracking"] = 5
+    params["number_people_max"] = 1
     # Ensure you point to the correct path where models are located
     params["default_model_folder"] = "/home/naoskin/openposeKuka/openpose/models/"
-    if not show:
-        params["display"] = 0
+    params["display"] = 0
     # Construct OpenPose object allocates GPU memory
     openpose = OpenPose(params)
 
