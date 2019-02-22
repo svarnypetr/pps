@@ -28,8 +28,6 @@ def get_int_coords(keypoints):
     return [x[:2].astype(int).tolist() for x in keypoints]
 
 
-SHOW = False
-PUBLISH = False
 align, depth_scale, openpose, pc, points, pipeline, profile = camera_setup()
 
 # Depth scale - units of the values inside a depth frame, i.e how to convert the value to units of 1 meter
@@ -38,8 +36,9 @@ depth_scale = depth_sensor.get_depth_scale()
 
 rospy.init_node('keypoint_tf_broadcaster')
 br = tf.TransformBroadcaster()
-rate = rospy.Rate(100.0)
+RATE = rospy.Rate(10.0)
 listener = tf.TransformListener()
+
 # image_pub = rospy.Publisher("realsense_image", Image, queue_size=10)
 # bridge = CvBridge()
 
@@ -116,6 +115,8 @@ try:
         if key & 0xFF == ord('q') or key == 27:
             cv2.destroyAllWindows()
             break
+
+        RATE.sleep()
 
 finally:
     pipeline.stop()
