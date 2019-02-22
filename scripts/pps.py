@@ -17,7 +17,7 @@ class PeriPersonalSpaceChecker(object):
     """
     def __init__(self,
                  config,
-                 topic_alert='pps_message',
+                 rate,
                  topic_status='pps_status',
                  ):
         self.keypoints = config['keypoints']
@@ -29,6 +29,7 @@ class PeriPersonalSpaceChecker(object):
 
         self.stop_threshold = config['stop_threshold']
         self.slow_threshold = config['slow_threshold']
+        self.status_buffer = [1]*rate
 
     @staticmethod
     def make_combinations(keypoints):
@@ -42,20 +43,6 @@ class PeriPersonalSpaceChecker(object):
             for obstacle_keypoint in keypoints[1]:
                 pairs = np.append(pairs, [[robot_keypoint, obstacle_keypoint]], axis=0)
         return pairs[1:, :]
-
-    def construct_pps_message(self, pair_states):
-        max_status = max(pair_states)
-        max_pairs = [x[0] for x in zip(self.pairs, pair_states) if x[1] == max_status]
-        verbose = {0: 'OK',
-                   1: 'SlOW',
-                   2: 'STOP',
-                   8: 'WARNING',
-                   }
-        pps_message_output = {'status': max_status,
-                              'pairs': max_pairs,
-                              'status_verbose': verbose[max_status]
-                              }
-        return pps_message_output
 
     def check_pps(self):
 
@@ -81,14 +68,15 @@ class PeriPersonalSpaceChecker(object):
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 pair_states.append(8)
 
-        if pair_distances:
-            print(min(pair_distances))
-        new_status = max(pair_states)
-        if self.pps_status != new_status:
-            self.publisher_status.publish(new_status)
+        new_state = max(pair_states)
+        print('pre buffer {}'.format(self.status_buffer))
+        self.status_buffer.append(new_state)
+        self.status_buffer = self.status_buffer[1:]
+        print('post buffer {}'.format(self.status_buffer))
+        new_status = max(self.status_buffer)
+        if new_status != self.pps_status:
             self.pps_status = new_status
-        # pps_message = self.construct_pps_message(pair_states)
-        # self.publisher.publish(str(pps_message))
+            self.publisher_status.publish(self.pps_status)
 
 
 def generate_uni_thresholds(keypoints, thr):
@@ -113,13 +101,20 @@ if __name__ == "__main__":
     moving_robot = ['/r1_link_'+str(x) for x in range(3, 8)] + ['/r1_ee']
     human_hands = ['/4', '/7']
 
-    various_thr_03 = generate_uni_thresholds(all_human_keypoints + moving_robot, 0.2)
-    various_thr_03.update({'/r1_ee': 0.4, '/r1_link_8': 0.4, '/r1_link_7': 0.4, '/r1_link_6': 0.4,
-                           '/r1_link_5': 0.4, '/r1_link_0': 0.4, '/r1_link_0': 0.4})
+    thr_sml = 0.4
+    various_thr_sml = generate_uni_thresholds(all_human_keypoints + moving_robot, 0.2)
+    various_thr_sml.update({'/r1_ee': thr_sml, '/r1_link_8': thr_sml, '/r1_link_7': thr_sml, '/r1_link_6': thr_sml,
+                           '/r1_link_5': thr_sml, '/r1_link_0': thr_sml, '/r1_link_0': thr_sml})
 
-    various_thr_06 = generate_uni_thresholds(all_human_keypoints + moving_robot, 0.2)
-    various_thr_06.update({'/r1_ee': 0.6, '/r1_link_8': 0.6, '/r1_link_7': 0.6, '/r1_link_6': 0.6,
-                           '/r1_link_5': 0.6, '/r1_link_0': 0.6, '/r1_link_0': 0.6})
+    thr_mid = 0.6
+    various_thr_mid = generate_uni_thresholds(all_human_keypoints + moving_robot, 0.2)
+    various_thr_mid.update({'/r1_ee': thr_mid, '/r1_link_8': thr_mid, '/r1_link_7': thr_mid, '/r1_link_6': thr_mid,
+                           '/r1_link_5': thr_mid, '/r1_link_0': thr_mid, '/r1_link_0': thr_mid})
+
+    thr_far = 1.6
+    various_thr_far = generate_uni_thresholds(all_human_keypoints + moving_robot, 0.2)
+    various_thr_far.update({'/r1_ee': thr_far, '/r1_link_8': thr_far, '/r1_link_7': thr_far, '/r1_link_6': thr_far,
+                          '/r1_link_5': thr_far, '/r1_link_0': thr_far, '/r1_link_0': thr_far})
 
     head_thr = generate_uni_thresholds(all_human_keypoints + moving_robot, 0)
     head_thr.update({'/0': 0.6, '/1': 0.6, '/14': 0.6, '/15': 0.6, '/16': 0.6, '/17': 0.6})
@@ -128,37 +123,40 @@ if __name__ == "__main__":
     scenarios = [
                     {'keypoints': [robot_base, all_human_keypoints],
                      'stop_threshold': generate_uni_thresholds(
-                                        all_human_keypoints + robot_base, 1),
+                                        all_human_keypoints + robot_base, thr_far),
                      'slow_threshold': generate_uni_thresholds(
                                         all_human_keypoints + robot_base, 0),
                      'name': 'scenario 0 stop zone',
                      },
                     {'keypoints': [robot_base, all_human_keypoints],
                      'stop_threshold': generate_uni_thresholds(
-                                        all_human_keypoints + robot_base, 0.6),
+                                        all_human_keypoints + robot_base, thr_mid),
                      'slow_threshold': generate_uni_thresholds(
-                                        all_human_keypoints + robot_base, 1),
-                     'name': 'scenario 1 warning and stop zone',
+                                        all_human_keypoints + robot_base, thr_far),
+                     'name': 'scenario 1 slow and stop zone',
                      },
                     {'keypoints': [moving_robot, all_human_keypoints],
-                     'stop_threshold': various_thr_06,
+                     'stop_threshold': various_thr_far,
                      'slow_threshold': generate_uni_thresholds(
                                         all_human_keypoints + moving_robot, 0),
                      'name': 'scenario 2 keypoint stop',
                      },
                     {'keypoints': [moving_robot, all_human_keypoints],
-                     'stop_threshold': various_thr_06,
-                     'slow_threshold': various_thr_03,
-                     'name': 'scenario 3 keypoint warning and stop',
+                     'stop_threshold': various_thr_mid,
+                     'slow_threshold': various_thr_sml,
+                     'name': 'scenario 3 keypoint slow and stop',
                      },
                     {'keypoints': [moving_robot, all_human_keypoints],
                      'stop_threshold': head_thr,
-                     'slow_threshold': various_thr_06,
-                     'name': 'scenario 4 keypoint warning and stop',
+                     'slow_threshold': various_thr_far,
+                     'name': 'scenario 4 keypoint slow and head stop',
                      },
                 ]
 
-    config = scenarios[0]
+    config = scenarios[4]
+    RATE = 10
+    rate = rospy.Rate(RATE)
+
     '''
     Experiment scenarios 
     0 - distance only from base, stopping
@@ -168,11 +166,10 @@ if __name__ == "__main__":
     4 - all keypoints taken into account, stopping only on head
     '''
 
-    pps = PeriPersonalSpaceChecker(config)
+    pps = PeriPersonalSpaceChecker(config, rate=RATE)
     # coeffgen = CoefficientGenerator(pps.listener, config['keypoints'][0]) #DO NOT CHANGE
 
-    RATE = rospy.Rate(10.0)
-    f = open('py_data.csv', 'a')
+    # f = open('py_data.csv', 'a')
     while not rospy.is_shutdown():
 
         pps.check_pps()
@@ -185,7 +182,7 @@ if __name__ == "__main__":
         # except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
         #     print('none')
 
-        RATE.sleep()
+        rate.sleep()
 
-    f.close()
+    # f.close()
     rospy.spin()
