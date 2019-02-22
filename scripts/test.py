@@ -17,10 +17,8 @@ import time
 
 REACHED_DESTINATION = False
 CURRENT_JOINT_VALUES = None
-# Run robot when starting experiment
-STATUS = 1
+STATUS = 1  # Run robot when starting experiment
 N = 20
-REPETITION = 0
 TRAJECTORY = list()
 
 template = [
@@ -32,10 +30,24 @@ template = [
 	[+radians(30), 0.0, 0.0, -radians(90), 0.0, radians(90), 0.0],
 ]
 
+# Construct N repetitions
 for _ in range(N):
     TRAJECTORY.extend(template)
 
 def move_joint_space(a1, a2, a3, a4, a5, a6, a7):
+    """Template for sending a joint space coordinates
+    for each joint in radians
+    
+    Arguments:
+        a1 {float} -- Joint value in radians for joint A1
+        a2 {float} -- Joint value in radians for joint A2
+        a3 {float} -- Joint value in radians for joint A3
+        a4 {float} -- Joint value in radians for joint A4
+        a5 {float} -- Joint value in radians for joint A5
+        a6 {float} -- Joint value in radians for joint A6
+        a7 {float} -- Joint value in radians for joint A7
+    """
+
     pub = rospy.Publisher("/r1/command/JointPosition", JointPosition, queue_size=10)
     rate = rospy.Rate(100)
     message = JointPosition()
@@ -50,39 +62,79 @@ def move_joint_space(a1, a2, a3, a4, a5, a6, a7):
     rate.sleep()
 
 def move_home():
+    """Move to home position, all joints are in 0 position"""
     move_joint_space(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
 def move_l_position():
+    """Move tobot to the L position, used 2nd, 4th and 6th joint"""
     move_joint_space(0.0, 0.174225583673, 0.0, -1.39891409874, 0.0, 1.57086062431, 0.0)
 
 def reached_destination(msg):
+    """Callback to check if robot has reached
+    its called destination
+    
+    Arguments:
+        msg {Time msg} -- Returns a time stamp when reached position
+    """
+
     global REACHED_DESTINATION
     REACHED_DESTINATION = True
 
 def set_path_parameters(robot_speed):
-    # It only works in different possition than it is when calling script
-        client = rospy.ServiceProxy(
-            "/r1/configuration/pathParameters",
-            SetPathParameters)
-        # FIXME We set both parameters 0.1, a velocity exeption occurs 
-        joint_relative_velocity = robot_speed
-        joint_relative_acceleration = 0.1
-        client(joint_relative_velocity=joint_relative_velocity,
-               joint_relative_acceleration=joint_relative_acceleration)
+    """Changing a path parameters for the robot,
+    mainly used for chaning the robot speed. This 
+    can only be done when NOT in home position.
+    Before changing a speed for a first time we need
+    to move a robot a little bit, otherwise it will
+    throw error and robot restart is required
+    
+    Arguments:
+        robot_speed {float} -- Robot speed between 0.1 and 1.0
+    """
+    client = rospy.ServiceProxy("/r1/configuration/pathParameters", SetPathParameters)
+    joint_relative_velocity = robot_speed
+    joint_relative_acceleration = 0.1
+    client(joint_relative_velocity=joint_relative_velocity,
+            joint_relative_acceleration=joint_relative_acceleration)
 
 def get_current_joint_values(msg):
+    """Callback to getting robot state
+    
+    Arguments:
+        msg {Joint msg} -- Structure of joint values from msg
+    """
+
     global CURRENT_JOINT_VALUES
     rate = rospy.Rate(100)
     CURRENT_JOINT_VALUES = msg.position
     rate.sleep()
 
 def pps_callback(msg):
+    """Callback for processing the PPS status
+    message. It overwrites a PPS status variable
+    when new is comming
+    
+    Arguments:
+        msg {[String msg]} -- PPS message
+    """
+
     global STATUS
     rate = rospy.Rate(100)
     STATUS = msg.data
     rate.sleep()
 
 def interpolate(array, n_points):
+    """Given a template array function interpolates
+    between each rows respectively by number of points.
+    
+    Arguments:
+        array {array} -- Matrix to be interpolated by rows
+        n_points {int} -- Resolution
+    
+    Returns:
+        array -- Interpolated matrix
+    """
+
     indexes = np.arange(1, n_points+1)
     interpolated = list()
     for i in range(len(template)-1):
@@ -90,7 +142,22 @@ def interpolate(array, n_points):
         interpolated.extend(linfit(indexes))
     return interpolated
 
-def find_closest(current_state, array, offset=0):   
+def find_closest(current_state, array, offset=0):
+    """Return closes position from current state
+    in interpolated matrix. This can be adjusted
+    by offset in both negative and positive direction.
+    
+    Arguments:
+        current_state {array} -- Current joint configuration in array
+        array {array} -- Matrix of interpolated configurations
+    
+    Keyword Arguments:
+        offset {int} -- Adjusting returned joint position by offset (default: {0})
+    
+    Returns:
+        array -- Joint space coordinates
+    """
+
     distances = list()
     for interpolation in array:
         dist = np.linalg.norm(current_state-interpolation)
@@ -110,6 +177,8 @@ if __name__ == '__main__':
     rospy.Subscriber("/r1/state/JointPosition", JointPosition, get_current_joint_values)
     pps_subscriber = rospy.Subscriber("pps_status", Int8, pps_callback)
 
+    rate = rospy.Rate(100)
+
     INTERPOLATED_TEMPLATE = interpolate(TRAJECTORY, 100)
 
     NEXT_FULL_INDEX = 20    
@@ -122,14 +191,11 @@ if __name__ == '__main__':
     SPEED = "full"
     set_path_parameters(robot_speed=1.0)
 
-    rate = rospy.Rate(100)
-
     COUNTER = 0
     index = 0
 
     start_time = time.time()
     while index < len(TRAJECTORY):
-
         # STOP PROCEDURE
         if STATUS == 3:
             current_state = [
@@ -141,19 +207,14 @@ if __name__ == '__main__':
                 CURRENT_JOINT_VALUES.a6,
                 CURRENT_JOINT_VALUES.a7
             ]
-
             if SPEED == "full":
                 next_stop = find_closest(current_state, INTERPOLATED_TEMPLATE, offset=NEXT_FULL_INDEX)
             elif SPEED == "slow":
                 next_stop = find_closest(current_state, INTERPOLATED_TEMPLATE, offset=NEXT_SLOW_INDEX)
             else:
                 rospy.logerr("We dont know our speed status!")
-
             try:
                 if next_stop.any():
-                    """ rospy.loginfo("Current state: {}".format(current_state))
-                    rospy.loginfo("Next state   : {}".format(next_stop))"""
-
                     REACHED_DESTINATION = False
                     move_joint_space(
                         next_stop[0],
@@ -164,9 +225,6 @@ if __name__ == '__main__':
                         next_stop[5],
                         next_stop[6],
                     )
-                    """ move_joint_space(
-                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                    ) """
                 else:
                     rospy.loginfo("Next stop index is out of reach")
             except:
@@ -189,21 +247,15 @@ if __name__ == '__main__':
                             CURRENT_JOINT_VALUES.a6,
                             CURRENT_JOINT_VALUES.a7
                         ]
-
                         if SPEED == "full":
                             next_stop = find_closest(current_state, INTERPOLATED_TEMPLATE, offset=NEXT_FULL_INDEX)
                         elif SPEED == "slow":
                             next_stop = find_closest(current_state, INTERPOLATED_TEMPLATE, offset=NEXT_SLOW_INDEX)
                         else:
-                            rospy.logerr("We dont know our speed status!")
-                        
-                        rospy.loginfo(next_stop)
-                        
+                            rospy.logerr("We dont know our speed status!")  
+                        rospy.loginfo(next_stop) 
                         try:
                             if next_stop.any():
-                                """ rospy.loginfo("Current state: {}".format(current_state))
-                                rospy.loginfo("Next state   : {}".format(next_stop))"""
-
                                 REACHED_DESTINATION = False
                                 move_joint_space(
                                     next_stop[0],
@@ -214,9 +266,6 @@ if __name__ == '__main__':
                                     next_stop[5],
                                     next_stop[6],
                                 )
-                                """ move_joint_space(
-                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                                ) """
                                 while (not rospy.is_shutdown()) and (not REACHED_DESTINATION):
                                     rate.sleep()
                             else:
@@ -228,7 +277,6 @@ if __name__ == '__main__':
                 elif STATUS == 1:
                     set_path_parameters(robot_speed=1.0)
                     SPEED = "full"
-
                 REACHED_DESTINATION = False
                 move_joint_space(
                     TRAJECTORY[index][0], 
