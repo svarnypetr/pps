@@ -36,7 +36,7 @@ depth_scale = depth_sensor.get_depth_scale()
 
 rospy.init_node('keypoint_tf_broadcaster')
 br = tf.TransformBroadcaster()
-RATE = rospy.Rate(10.0)
+RATE = rospy.Rate(100)
 listener = tf.TransformListener()
 
 # image_pub = rospy.Publisher("realsense_image", Image, queue_size=10)
@@ -105,28 +105,21 @@ while not rospy.is_shutdown():
             #     image_pub.publish(bridge.cv2_to_imgmsg(output_image, encoding="passthrough"))
             # except CvBridgeError as e:
             #     print(e)
-
-            # cv2.circle(depth_colormap, tuple(int_coords[0]), 5, (0, 0, 255), -1) #  WIP: Debug code for eval point
-            images = np.hstack((output_image, depth_colormap))
-            cv2.namedWindow('Align Example', cv2.WINDOW_AUTOSIZE)
-            cv2.imshow('Align Example', images)
-
-            key = cv2.waitKey(1)
-            # Press esc or 'q' to close the image window
-            if key & 0xFF == ord('q') or key == 27:
-                cv2.destroyAllWindows()
-                break
+            #
+            # # cv2.circle(depth_colormap, tuple(int_coords[0]), 5, (0, 0, 255), -1) #  WIP: Debug code for eval point
+            # images = np.hstack((output_image, depth_colormap))
+            # cv2.namedWindow('Align Example', cv2.WINDOW_AUTOSIZE)
+            # cv2.imshow('Align Example', images)
+            #
+            # key = cv2.waitKey(1)
+            # # Press esc or 'q' to close the image window
+            # if key & 0xFF == ord('q') or key == 27:
+            #     cv2.destroyAllWindows()
+            #     break
 
             RATE.sleep()
 
     finally:
         pipeline.stop()
+
 rospy.spin()
-
-rospy.on_shutdown(pipeline.stop())
-
-# Original for video export
-# fourcc = cv2.VideoWriter_fourcc('X', '2', '6', '4')
-# frame_width = 640  # int(color_data.get(3))
-# frame_height = 480   # int(color_data.get(4))
-# out = cv2.VideoWriter('outputD.avi', fourcc, 20.0, (frame_width, frame_height), True)
