@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import time
+# import time
 
 import cv2
 import numpy as np
@@ -9,8 +9,8 @@ import pyrealsense2 as rs
 import rospy
 import tf
 from tf.transformations import quaternion_from_euler
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
+# from sensor_msgs.msg import Image
+# from cv_bridge import CvBridge, CvBridgeError
 
 from camera_setup import camera_setup
 
