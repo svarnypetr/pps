@@ -101,13 +101,20 @@ if __name__ == "__main__":
     moving_robot = ['/r1_link_'+str(x) for x in range(3, 8)] + ['/r1_ee']
     human_hands = ['/4', '/7']
 
-    various_thr_03 = generate_uni_thresholds(all_human_keypoints + moving_robot, 0.2)
-    various_thr_03.update({'/r1_ee': 0.4, '/r1_link_8': 0.4, '/r1_link_7': 0.4, '/r1_link_6': 0.4,
-                           '/r1_link_5': 0.4, '/r1_link_0': 0.4, '/r1_link_0': 0.4})
+    thr_sml = 0.4
+    various_thr_sml = generate_uni_thresholds(all_human_keypoints + moving_robot, 0.2)
+    various_thr_sml.update({'/r1_ee': thr_sml, '/r1_link_8': thr_sml, '/r1_link_7': thr_sml, '/r1_link_6': thr_sml,
+                           '/r1_link_5': thr_sml, '/r1_link_0': thr_sml, '/r1_link_0': thr_sml})
 
-    various_thr_06 = generate_uni_thresholds(all_human_keypoints + moving_robot, 0.2)
-    various_thr_06.update({'/r1_ee': 0.6, '/r1_link_8': 0.6, '/r1_link_7': 0.6, '/r1_link_6': 0.6,
-                           '/r1_link_5': 0.6, '/r1_link_0': 0.6, '/r1_link_0': 0.6})
+    thr_mid = 0.6
+    various_thr_mid = generate_uni_thresholds(all_human_keypoints + moving_robot, 0.2)
+    various_thr_mid.update({'/r1_ee': thr_mid, '/r1_link_8': thr_mid, '/r1_link_7': thr_mid, '/r1_link_6': thr_mid,
+                           '/r1_link_5': thr_mid, '/r1_link_0': thr_mid, '/r1_link_0': thr_mid})
+
+    thr_far = 1.6
+    various_thr_far = generate_uni_thresholds(all_human_keypoints + moving_robot, 0.2)
+    various_thr_far.update({'/r1_ee': thr_far, '/r1_link_8': thr_far, '/r1_link_7': thr_far, '/r1_link_6': thr_far,
+                          '/r1_link_5': thr_far, '/r1_link_0': thr_far, '/r1_link_0': thr_far})
 
     head_thr = generate_uni_thresholds(all_human_keypoints + moving_robot, 0)
     head_thr.update({'/0': 0.6, '/1': 0.6, '/14': 0.6, '/15': 0.6, '/16': 0.6, '/17': 0.6})
@@ -116,37 +123,37 @@ if __name__ == "__main__":
     scenarios = [
                     {'keypoints': [robot_base, all_human_keypoints],
                      'stop_threshold': generate_uni_thresholds(
-                                        all_human_keypoints + robot_base, 1),
+                                        all_human_keypoints + robot_base, thr_far),
                      'slow_threshold': generate_uni_thresholds(
                                         all_human_keypoints + robot_base, 0),
                      'name': 'scenario 0 stop zone',
                      },
                     {'keypoints': [robot_base, all_human_keypoints],
                      'stop_threshold': generate_uni_thresholds(
-                                        all_human_keypoints + robot_base, 0.6),
+                                        all_human_keypoints + robot_base, thr_mid),
                      'slow_threshold': generate_uni_thresholds(
-                                        all_human_keypoints + robot_base, 1),
-                     'name': 'scenario 1 warning and stop zone',
+                                        all_human_keypoints + robot_base, thr_far),
+                     'name': 'scenario 1 slow and stop zone',
                      },
                     {'keypoints': [moving_robot, all_human_keypoints],
-                     'stop_threshold': various_thr_06,
+                     'stop_threshold': various_thr_far,
                      'slow_threshold': generate_uni_thresholds(
                                         all_human_keypoints + moving_robot, 0),
                      'name': 'scenario 2 keypoint stop',
                      },
                     {'keypoints': [moving_robot, all_human_keypoints],
-                     'stop_threshold': various_thr_06,
-                     'slow_threshold': various_thr_03,
-                     'name': 'scenario 3 keypoint warning and stop',
+                     'stop_threshold': various_thr_mid,
+                     'slow_threshold': various_thr_sml,
+                     'name': 'scenario 3 keypoint slow and stop',
                      },
                     {'keypoints': [moving_robot, all_human_keypoints],
                      'stop_threshold': head_thr,
-                     'slow_threshold': various_thr_06,
-                     'name': 'scenario 4 keypoint warning and stop',
+                     'slow_threshold': various_thr_far,
+                     'name': 'scenario 4 keypoint slow and head stop',
                      },
                 ]
 
-    config = scenarios[0]
+    config = scenarios[4]
     RATE = 10
     rate = rospy.Rate(RATE)
 
