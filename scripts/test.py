@@ -17,7 +17,8 @@ import time
 
 REACHED_DESTINATION = False
 CURRENT_JOINT_VALUES = None
-STATUS = 0
+# Run robot when starting experiment
+STATUS = 1
 N = 20
 REPETITION = 0
 TRAJECTORY = list()
@@ -148,26 +149,29 @@ if __name__ == '__main__':
             else:
                 rospy.logerr("We dont know our speed status!")
 
-            if next_stop.any():
-                """ rospy.loginfo("Current state: {}".format(current_state))
-                rospy.loginfo("Next state   : {}".format(next_stop))"""
+            try:
+                if next_stop.any():
+                    """ rospy.loginfo("Current state: {}".format(current_state))
+                    rospy.loginfo("Next state   : {}".format(next_stop))"""
 
-                REACHED_DESTINATION = False
-                move_joint_space(
-                    next_stop[0],
-                    next_stop[1],
-                    next_stop[2],
-                    next_stop[3],
-                    next_stop[4],
-                    next_stop[5],
-                    next_stop[6],
-                )
-                """ move_joint_space(
-                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                ) """
-            else:
-                rospy.loginfo("Next stop index is out of reach")
-            
+                    REACHED_DESTINATION = False
+                    move_joint_space(
+                        next_stop[0],
+                        next_stop[1],
+                        next_stop[2],
+                        next_stop[3],
+                        next_stop[4],
+                        next_stop[5],
+                        next_stop[6],
+                    )
+                    """ move_joint_space(
+                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+                    ) """
+                else:
+                    rospy.loginfo("Next stop index is out of reach")
+            except:
+                while (not rospy.is_shutdown()) and (not REACHED_DESTINATION):
+                    rate.sleep()
             while STATUS == 3:
                 rate.sleep()
             index -= 1
