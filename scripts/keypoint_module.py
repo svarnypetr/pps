@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-# import time
-
 import cv2
 import numpy as np
 import pyrealsense2 as rs
@@ -9,8 +7,8 @@ import pyrealsense2 as rs
 import rospy
 import tf
 from tf.transformations import quaternion_from_euler
-# from sensor_msgs.msg import Image
-# from cv_bridge import CvBridge, CvBridgeError
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
 
 from camera_setup import camera_setup
 
@@ -39,8 +37,8 @@ br = tf.TransformBroadcaster()
 RATE = rospy.Rate(100)
 listener = tf.TransformListener()
 
-# image_pub = rospy.Publisher("realsense_image", Image, queue_size=10)
-# bridge = CvBridge()
+image_pub = rospy.Publisher("realsense_image", Image, queue_size=10)
+bridge = CvBridge()
 
 # OpenPose Keypoint indexes
 head = [0, 1, 14, 15, 16, 17]
@@ -86,7 +84,6 @@ while not rospy.is_shutdown():
 
             if keypoints.any() and depth_image.any():
                 interest_kpts = keypoints[0][interesting, :]
-                # print(interest_kpts)
 
                 distances_to_camera = get_distances(interest_kpts, depth_image, depth_scale)
 
@@ -101,21 +98,10 @@ while not rospy.is_shutdown():
                                      kpt_names[idx],
                                      'camera_link')
 
-            # try:
-            #     image_pub.publish(bridge.cv2_to_imgmsg(output_image, encoding="passthrough"))
-            # except CvBridgeError as e:
-            #     print(e)
-            #
-            # # cv2.circle(depth_colormap, tuple(int_coords[0]), 5, (0, 0, 255), -1) #  WIP: Debug code for eval point
-            # images = np.hstack((output_image, depth_colormap))
-            # cv2.namedWindow('Align Example', cv2.WINDOW_AUTOSIZE)
-            # cv2.imshow('Align Example', images)
-            #
-            # key = cv2.waitKey(1)
-            # # Press esc or 'q' to close the image window
-            # if key & 0xFF == ord('q') or key == 27:
-            #     cv2.destroyAllWindows()
-            #     break
+            try:
+                image_pub.publish(bridge.cv2_to_imgmsg(output_image, encoding="passthrough"))
+            except CvBridgeError as e:
+                print(e)
 
             RATE.sleep()
 

@@ -2,13 +2,10 @@
 
 import rospy
 import tf
-from tf.transformations import quaternion_from_euler
 from geometry_msgs.msg import Point
 from visualization_msgs.msg import Marker
 
 BROADCAST_TF = True
-# CAM_COORD = (-1.0, -1.0, 1.0)
-# CAM_QUAT = quaternion_from_euler(-1.5707, 0, -1.5707)
 # # # Video coordinates
 CAM_COORD = (1.678, 0.912, 0.429)
 CAM_QUAT = (-0.325, -0.62, 0.63, 0.334)
