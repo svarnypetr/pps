@@ -10,7 +10,7 @@ if __name__ == '__main__':
     # row = ["timestamp", "x", "y", "z", "rx", "ry", "rz", "rw"]
     row = ["timestamp", "left_ee_distance", "nose_ee_distance", "left_3_distance",
            "nose_3_distance", "left_0_distance", "nose_0_distance"]
-    rospy.init_node("get_tfs")
+    rospy.init_node("get_distances")
     listener = tf.TransformListener()
 
     f = open("distances.csv", "a")
@@ -30,7 +30,7 @@ if __name__ == '__main__':
                 pair_distances.append(0)
                 continue
 
-        if pair_distances:
+        if not (0 in pair_distances):
             f.write("{}, {}, {}, {}, {}, {}, {}\n".format(
                 rospy.Time.now(), pair_distances[0], pair_distances[1], pair_distances[2], pair_distances[3],
                 pair_distances[4], pair_distances[5]

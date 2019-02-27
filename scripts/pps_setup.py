@@ -163,7 +163,9 @@ if __name__ == "__main__":
         #
         # pps = PeriPersonalSpaceChecker(listener, pair_array=pairs)
 
-        keypoints1 = ['/r1_ee', '/r1_link_6']
+        keypoints1 = ['/r1_ee', '/r1_link_7', '/r1_link_6',
+                      '/r1_link_5', '/r1_link_4', '/r1_link_3',
+                      '/r1_link_2', '/r1_link_1', '/r1_link_0']
         coeffs_generator1 = CoefficientGenerator(listener, keypoints_list=keypoints1)
 
         rate = rospy.Rate(10.0)
