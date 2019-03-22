@@ -61,7 +61,7 @@ def setup_advanced_camera():
 def camera_setup():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     # Append to syspath the path to openpose python build
-    sys.path.append('/home/naoskin/openposeKuka/openpose/build/python')
+    sys.path.append('/home/naoskin/openpose140/build/python')
     try:
         from openpose import *
     except:
@@ -89,7 +89,7 @@ def camera_setup():
     # params["tracking"] = 5
     # params["number_people_max"] = 1
     # Ensure you point to the correct path where models are located
-    params["default_model_folder"] = "/home/naoskin/openposeKuka/openpose/models/"
+    params["default_model_folder"] = "/home/naoskin/openpose140/models/"
     params["display"] = 0
     # Construct OpenPose object allocates GPU memory
     openpose = OpenPose(params)
