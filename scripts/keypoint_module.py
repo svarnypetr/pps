@@ -26,7 +26,7 @@ def get_int_coords(keypoints):
     return [x[:2].astype(int).tolist() for x in keypoints]
 
 
-align, depth_scale, openpose, pc, points, pipeline, profile = camera_setup()
+align, depth_scale, openpose, opWrapper, pc, points, pipeline, profile = camera_setup()
 
 # Depth scale - units of the values inside a depth frame, i.e how to convert the value to units of 1 meter
 depth_sensor = profile.get_device().first_depth_sensor()
@@ -80,32 +80,46 @@ while not rospy.is_shutdown():
             # Render images
             depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
 
-            keypoints, output_image = openpose.forward(color_image, True)
+            op_datum = openpose.Datum()
+            op_datum.cvInputData = color_image
+            opWrapper.emplaceAndPop([op_datum])
+            keypoints = op_datum.poseKeypoints
+            # import ipdb; ipdb.set_trace()
+            output_image = op_datum.cvOutputData
 
             if keypoints.any() and depth_image.any():
-                interest_kpts = keypoints[0][interesting, :]
+                print keypoints
+                # interest_kpts = keypoints[0][interesting, :]
 
-                distances_to_camera = get_distances(interest_kpts, depth_image, depth_scale)
+                # distances_to_camera = get_distances(interest_kpts, depth_image, depth_scale)
 
-                int_coords = get_int_coords(interest_kpts)
-                distances = get_distances(interest_kpts, depth_image, depth_scale)
-                point_lst = [rs.rs2_deproject_pixel_to_point(depth_intrin, x, y) for x, y in zip(int_coords, distances)]
+                # int_coords = get_int_coords(interest_kpts)
+                # distances = get_distances(interest_kpts, depth_image, depth_scale)
+                # point_lst = [rs.rs2_deproject_pixel_to_point(depth_intrin, x, y) for x, y in zip(int_coords, distances)]
+                #
+                # for idx, pt in enumerate(point_lst):
+                #     br.sendTransform(tuple(pt),
+                #                      quaternion_from_euler(0, 0, 0),
+                #                      rospy.Time.now(),
+                #                      kpt_names[idx],
+                #                      'camera_link')
+                images = np.hstack((output_image, depth_colormap))
+                cv2.namedWindow('Align Example', cv2.WINDOW_AUTOSIZE)
+                cv2.imshow('Align Example', images)
+                key = cv2.waitKey(1)
+                # Press esc or 'q' to close the image window
+                if key & 0xFF == ord('q') or key == 27:
+                    cv2.destroyAllWindows()
+                    break
 
-                for idx, pt in enumerate(point_lst):
-                    br.sendTransform(tuple(pt),
-                                     quaternion_from_euler(0, 0, 0),
-                                     rospy.Time.now(),
-                                     kpt_names[idx],
-                                     'camera_link')
 
-            try:
-                image_pub.publish(bridge.cv2_to_imgmsg(output_image, encoding="passthrough"))
-            except CvBridgeError as e:
-                print(e)
+            # try:
+            #     image_pub.publish(bridge.cv2_to_imgmsg(output_image, encoding="passthrough"))
+            # except CvBridgeError as e:
+            #     print(e)
 
             RATE.sleep()
 
     finally:
         pipeline.stop()
-
 rospy.spin()

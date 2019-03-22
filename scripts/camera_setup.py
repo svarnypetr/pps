@@ -61,9 +61,9 @@ def setup_advanced_camera():
 def camera_setup():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     # Append to syspath the path to openpose python build
-    sys.path.append('/home/naoskin/openposeKuka/openpose/build/python')
+    sys.path.append('/home/naoskin/openpose/build/python/')
     try:
-        from openpose import *
+        from openpose import pyopenpose as op
     except:
         raise Exception(
             'Error: OpenPose library could not be found. Did you enable `BUILD_PYTHON` in CMake and have this Python script in the right folder?')
@@ -79,20 +79,21 @@ def camera_setup():
     params["scale_gap"] = 0.3
     params["scale_number"] = 1
     params["render_threshold"] = 0.05
-    params["render_pose"] = True
+    # params["render_pose"] = True
     params["num_gpu_start"] = 0
     params["disable_blending"] = False
     params["number_people_max"] = 1
-    params["download_heatmaps"] = False
     params["heatmaps_add_parts"] = True
     params["heatmaps_add_PAFs"] = True
     # params["tracking"] = 5
     # params["number_people_max"] = 1
     # Ensure you point to the correct path where models are located
-    params["default_model_folder"] = "/home/naoskin/openposeKuka/openpose/models/"
+    params["model_folder"] = "/home/naoskin/openpose/models/"
     params["display"] = 0
     # Construct OpenPose object allocates GPU memory
-    openpose = OpenPose(params)
+    opWrapper = op.WrapperPython()
+    opWrapper.configure(params)
+    opWrapper.start()
 
     depth_fps = 90
 
@@ -130,7 +131,7 @@ def camera_setup():
 
     print("Camera setup ready.")
 
-    return align, depth_scale, openpose, pc, points, pipeline, profile
+    return align, depth_scale, op, opWrapper, pc, points, pipeline, profile
 
 
 if __name__ == '__main__':
