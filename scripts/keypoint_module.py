@@ -7,7 +7,6 @@ import pyrealsense2 as rs
 import rospy
 import tf
 from tf.transformations import quaternion_from_euler
-from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
 from camera_setup import camera_setup
@@ -37,7 +36,6 @@ br = tf.TransformBroadcaster()
 RATE = rospy.Rate(100)
 listener = tf.TransformListener()
 
-image_pub = rospy.Publisher("realsense_image", Image, queue_size=10)
 bridge = CvBridge()
 
 # OpenPose Keypoint indexes
@@ -84,26 +82,32 @@ while not rospy.is_shutdown():
             op_datum.cvInputData = color_image
             opWrapper.emplaceAndPop([op_datum])
             keypoints = op_datum.poseKeypoints
-            # import ipdb; ipdb.set_trace()
             output_image = op_datum.cvOutputData
+            # output_image = op_datum.outputData
 
             if keypoints.any() and depth_image.any():
-                print keypoints
-                # interest_kpts = keypoints[0][interesting, :]
+                try:
+                    interest_kpts = keypoints[0][interesting, :]
+                    distances_to_camera = get_distances(interest_kpts, depth_image, depth_scale)
 
-                # distances_to_camera = get_distances(interest_kpts, depth_image, depth_scale)
+                    int_coords = get_int_coords(interest_kpts)
+                    distances = get_distances(interest_kpts, depth_image, depth_scale)
+                    point_lst = [rs.rs2_deproject_pixel_to_point(depth_intrin, x, y) for x, y in zip(int_coords, distances)]
 
-                # int_coords = get_int_coords(interest_kpts)
-                # distances = get_distances(interest_kpts, depth_image, depth_scale)
-                # point_lst = [rs.rs2_deproject_pixel_to_point(depth_intrin, x, y) for x, y in zip(int_coords, distances)]
-                #
-                # for idx, pt in enumerate(point_lst):
-                #     br.sendTransform(tuple(pt),
-                #                      quaternion_from_euler(0, 0, 0),
-                #                      rospy.Time.now(),
-                #                      kpt_names[idx],
-                #                      'camera_link')
-                images = np.hstack((output_image, depth_colormap))
+                    for idx, pt in enumerate(point_lst):
+                        br.sendTransform(tuple(pt),
+                                         quaternion_from_euler(0, 0, 0),
+                                         rospy.Time.now(),
+                                         kpt_names[idx],
+                                         'camera_link')
+
+                except:
+                    print(keypoints)
+                # import ipdb; ipdb.set_trace()
+
+
+                # images = np.hstack((output_image, depth_colormap))
+                images = np.hstack((output_image, color_image))
                 cv2.namedWindow('Align Example', cv2.WINDOW_AUTOSIZE)
                 cv2.imshow('Align Example', images)
                 key = cv2.waitKey(1)
@@ -112,11 +116,6 @@ while not rospy.is_shutdown():
                     cv2.destroyAllWindows()
                     break
 
-
-            # try:
-            #     image_pub.publish(bridge.cv2_to_imgmsg(output_image, encoding="passthrough"))
-            # except CvBridgeError as e:
-            #     print(e)
 
             RATE.sleep()
 

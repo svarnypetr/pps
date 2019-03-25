@@ -73,20 +73,20 @@ def camera_setup():
     params = dict()
     params["logging_level"] = 4
     params["output_resolution"] = "-1x-1"
-    params["net_resolution"] = "-1x480"
+    params["net_resolution"] = "-1x240"
     params["model_pose"] = "COCO"
     params["alpha_pose"] = 0.6
     params["scale_gap"] = 0.3
     params["scale_number"] = 1
     params["render_threshold"] = 0.05
-    # params["render_pose"] = True
+    params["render_pose"] = 2
     params["num_gpu_start"] = 0
     params["disable_blending"] = False
     params["number_people_max"] = 1
-    params["heatmaps_add_parts"] = True
-    params["heatmaps_add_PAFs"] = True
-    # params["tracking"] = 5
-    # params["number_people_max"] = 1
+    params["heatmaps_add_parts"] = False
+    params["heatmaps_add_PAFs"] = False
+    params["tracking"] = 5
+    params["number_people_max"] = 1
     # Ensure you point to the correct path where models are located
     params["model_folder"] = "/home/naoskin/openpose/models/"
     params["display"] = 0
